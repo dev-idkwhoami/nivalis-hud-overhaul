@@ -1,0 +1,13 @@
+.tools/
+work/
+**/bin/
+**/obj/
+
+
+# Local agent metadata, Python caches, and environment files
+.agents/
+.codex/
+**/__pycache__/
+*.pyc
+.env
+.env.*

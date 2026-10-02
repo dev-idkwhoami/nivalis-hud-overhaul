@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Nivalis.HudOverhaul</AssemblyName>
+    <RootNamespace>NivalisMods.HudOverhaul</RootNamespace>
+    <Version>1.0.0</Version>
+    <Description>Additional sorting options for game UI lists.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../data/farm-screen-defaults.json" LogicalName="HudOverhaul.FarmScreenDefaults.json" />
+    <EmbeddedResource Include="../localization/labels.en.json" LogicalName="HudOverhaul.Labels.en.json" WithCulture="false" />
+    <Reference Include="BepInEx.Core" HintPath="$(GamePath)/BepInEx/core/BepInEx.Core.dll" Private="false" />
+    <Reference Include="BepInEx.Unity.IL2CPP" HintPath="$(GamePath)/BepInEx/core/BepInEx.Unity.IL2CPP.dll" Private="false" />
+    <Reference Include="Il2CppInterop.Runtime" HintPath="$(GamePath)/BepInEx/core/Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="MonoMod.RuntimeDetour" HintPath="$(GamePath)/BepInEx/core/MonoMod.RuntimeDetour.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(GamePath)/BepInEx/core/0Harmony.dll" Private="false" />
+    <Reference Include="$(GamePath)/BepInEx/interop/*.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="CheckGameReferences" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(GamePath)/BepInEx/interop/Assembly-CSharp.dll')"
+           Text="Game references missing. Set GamePath to the game directory and run BepInEx IL2CPP once to generate interop assemblies." />
+  </Target>
+</Project>
