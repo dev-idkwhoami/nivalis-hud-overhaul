@@ -9,8 +9,8 @@ internal static class CompanionSettings
     internal static void Register()
     {
         var mod = SettingsRegistry.Register(Plugin.Id,
-            new ModMetadata("HUD Overhaul", "dev-idkwhoami", Plugin.Version,
-                "Search, sorting, shopping, farm screens and other HUD improvements.",
+            new ModMetadata("HUD Overhaul", "dev_idkwhoami", Plugin.Version,
+                "Overhauls most of the UI & HUD with a bunch of QoL changes",
                 Icon: ModIcon.FromResource(typeof(Plugin).Assembly, "HudOverhaul.Icon.png")), ConfigPath);
         var features = mod.AddCategory("Features", Labels.Get("settings.category.features"));
         var shopping = mod.AddCategory("Shopping", Labels.Get("settings.category.shopping"));
