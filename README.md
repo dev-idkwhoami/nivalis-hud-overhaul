@@ -8,7 +8,7 @@ installing development builds, and packaging releases.
 - .NET SDK 8 (the mod targets .NET 6; the checks target .NET 8).
 - GNU Make, Bash, and standard Unix utilities (including sed).
 - The game with BepInEx 6 IL2CPP and generated interop assemblies.
-- Mod Companion 1.0.0, installed separately. Development builds use the sibling `mod-companion` project.
+- Mod Companion 1.0.0, included in the archive.
 
 Launch the game with BepInEx once before building. The build reads references
 from `BepInEx/core/` and `BepInEx/interop/` in that installation. The first build
@@ -182,7 +182,7 @@ Licensed under the [MIT License](LICENSE).
 
 ## Mod Companion settings
 
-Mod Companion 1.0.0 is required. F5 and the native settings entry open
+Mod Companion 1.0.0 is required and included. F5 and the native settings entry open
 its shared menu; HUD Overhaul no longer provides a standalone settings window.
 Choose HUD Overhaul's icon in the top row. Features, Shopping and Farm are custom
 tabs; Controls, Developer and Info use Companion's dedicated section APIs. Controls
@@ -196,8 +196,8 @@ Farm Editor now has a gamepad binding slot as well. The retired HUD-menu action
 identity is inert, retained only to prevent unknown-action errors when the game
 loads its own existing input save packet; HUD config values are not imported.
 
-Building this version requires the sibling `mod-companion` project. Install its
-DLL separately; HUD packaging does not bundle it. BepInEx will refuse to load
+Builds reference the bundled DLL in `dependencies/`. Packaging and deployment include
+all files from that folder under `BepInEx/plugins/`; no separate Companion download is needed. BepInEx will refuse to load
 HUD Overhaul if the dependency is missing. In-game controller/rebinding checks
 remain necessary with both rebuilt DLLs.
 

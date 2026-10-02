@@ -29,6 +29,7 @@ if [[ "$action" == install ]]; then
     }
     destination="$GAME_PATH/BepInEx/plugins"
     mkdir -p -- "$destination"
+    cp -a -- "$root/dependencies/." "$destination/"
     cp -- "$binary" "$destination/$assembly.dll"
     rm -f -- "$destination/hud-overhaul/$assembly.dll" \
         "$destination/Nivalis.ConditionOrder.dll" "$destination/condition-order/Nivalis.ConditionOrder.dll"
@@ -42,6 +43,7 @@ output="$(cd -- "$output" && pwd)"
 staging="$(mktemp -d "$output/.package.XXXXXXXX")"
 trap 'rm -rf -- "$staging"' EXIT
 mkdir -p -- "$staging/files/BepInEx/plugins"
+cp -a -- "$root/dependencies/." "$staging/files/BepInEx/plugins/"
 cp -- "$binary" "$staging/files/BepInEx/plugins/$assembly.dll"
 "$dotnet" msbuild "$root/tools/Package.proj" -nologo -target:Package \
     "-p:PackageSource=$staging/files" "-p:PackageArchive=$staging/archive.zip"
