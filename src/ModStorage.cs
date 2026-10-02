@@ -8,13 +8,13 @@ internal static class ModStorage
     internal static string FilePath(string name) => Path.Combine(Root, name);
     private static readonly string[] LegacyNames =
     {
-        "local.nivalis.hudoverhaul.cfg", "HUDOverhaul.labels.json", "HUDOverhaul.quick-slots.json",
+        "HUDOverhaul.labels.json", "HUDOverhaul.quick-slots.json",
         "HUDOverhaul.staff-order.json", "HUDOverhaul.farm-screen-preview.json", "HUDOverhaul.history.log",
         "HUDOverhaul.farm-targets", "HUDOverhaul.payroll"
     };
 
-    // Run before any stores/config entries open. Moving preserves translations,
-    // save branches and preferences without creating development backups.
+    // Preserve gameplay data and translations. Configuration is owned by Mod
+    // Companion; old .cfg files are deliberately neither read nor migrated.
     internal static void Initialize(string configRoot)
     {
         Root = Path.Combine(configRoot, "HUDOverhaul");
@@ -23,14 +23,14 @@ internal static class ModStorage
         foreach (var name in LegacyNames)
         {
             var source = Path.Combine(configRoot, name);
-            var target = FilePath(name == LegacyNames[0] ? "HUDOverhaul.cfg" : name);
+            var target = FilePath(name);
             if (File.Exists(source)) moves.Add((source, target));
             else if (Directory.Exists(source))
                 foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
                     moves.Add((file, Path.Combine(target, Path.GetRelativePath(source, file))));
         }
         // Check every conflict before moving anything. Never silently replace
-        // a different history/config file with another copy.
+        // a different data file with another copy.
         foreach (var (source, target) in moves)
             if (Directory.Exists(target) || (File.Exists(target) && !Identical(source, target)))
                 throw new IOException($"HUD Overhaul migration conflict: '{source}' and '{target}'. Both were preserved; resolve the duplicate before loading the mod.");

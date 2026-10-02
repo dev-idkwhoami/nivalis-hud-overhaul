@@ -1,4 +1,4 @@
-using BepInEx.Configuration;
+using NivalisMods.ModCompanion.Api;
 using HarmonyLib;
 using Nivalis;
 using Nivalis.GhostSystem.CustomerLoop;
@@ -14,16 +14,24 @@ namespace NivalisMods.HudOverhaul;
 
 internal static class EstimatedShopping
 {
-    internal static ConfigEntry<bool> _enabled = null!;
+    internal static Setting<bool> _enabled = null!;
+    private static bool _fallingBack;
     internal static bool Enabled => _enabled.Value;
     internal static VenueMap? Demands;
     internal static ItemMap? Items;
-    internal static void Initialize(ConfigFile config) => _enabled = config.Bind("ShoppingList", "EstimatedDemand", false,
-        "Remember Standard/Estimated shopping tab. Estimated uses one day of stock and seven completed days of sales.");
+    internal static void Initialize(SettingsCategory shopping)
+    {
+        _enabled = shopping.Choice("DemandMode", "Shopping demand", false,
+            new[] { new Choice<bool>(false, "Standard"), new Choice<bool>(true, "Estimated") },
+            "Also remembers the selected shopping tab. Estimates use seven completed days of sales.");
+        _enabled.Changed += _ => { if (!_fallingBack) Plugin.Guard("Refresh shopping demand mode", RefreshPanels); };
+    }
 
     internal static void FallBack()
     {
-        _enabled.Value = false;
+        _fallingBack = true;
+        try { _enabled.Value = false; }
+        finally { _fallingBack = false; }
         Demands = null; Items = null;
         Plugin.Logger.LogWarning("Estimated shopping unavailable; showing the Standard list.");
     }
@@ -32,7 +40,6 @@ internal static class EstimatedShopping
     {
         if (_enabled.Value == estimated) return;
         _enabled.Value = estimated;
-        RefreshPanels();
     }
 
     internal static void RefreshPanels()

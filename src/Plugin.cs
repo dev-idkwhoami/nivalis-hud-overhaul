@@ -1,6 +1,6 @@
 using BepInEx;
 using BepInEx.Logging;
-using BepInEx.Configuration;
+using NivalisMods.ModCompanion.Api;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using Il2CppInterop.Runtime.Injection;
@@ -11,6 +11,7 @@ using Nivalis.GhostSystem.CustomerLoop;
 namespace NivalisMods.HudOverhaul;
 
 [BepInPlugin(Id, "HUD Overhaul", Version)]
+[BepInDependency(SettingsRegistry.PluginId, SettingsRegistry.PluginVersion)]
 public sealed partial class Plugin : BasePlugin
 {
     public const string Version = "1.0.1";
@@ -21,11 +22,8 @@ public sealed partial class Plugin : BasePlugin
     {
         Logger = Log;
         ModStorage.Initialize(Paths.ConfigPath);
-        var settings = new ConfigFile(ModStorage.FilePath("HUDOverhaul.cfg"), true,
-            new BepInPlugin(Id, "HUD Overhaul", Version));
-        ModOptions.Initialize(settings);
         Labels.Load(ModStorage.FilePath(Labels.FileName), message => Log.LogWarning(message));
-        ClassInjector.RegisterTypeInIl2Cpp<ModSettingsMenu>();
+        CompanionSettings.Register();
         ClassInjector.RegisterTypeInIl2Cpp<CombinedIngredients>();
         ClassInjector.RegisterTypeInIl2Cpp<HistoryPump>();
         ClassInjector.RegisterTypeInIl2Cpp<FarmScreenEditor>();
@@ -46,21 +44,19 @@ public sealed partial class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<ShoppingVenues>();
         var harmony = new Harmony(Id);
         QuestPatchRegistration.Install(harmony);
+        CompanionSettings.SetQuestAvailability();
         ExpandedSearch.Install();
         QuickActionsPreview.Initialize();
         QuickActionBindings.Initialize();
-        EstimatedShopping.Initialize(settings);
-        FarmScreenEditor.Initialize(settings);
         FarmScreens.Initialize();
         Payroll.Initialize();
         Guard("Initialize history", GameHistory.Initialize);
-        AddComponent<ModSettingsMenu>();
         AddComponent<HistoryPump>();
         AddComponent<FarmScreenEditor>();
         AddComponent<FarmScreens>();
         // Own the input listener through BepInEx, independently of scene UI startup.
         AddComponent<QuickActionsPreview>();
-        Log.LogInfo($"HUD Overhaul {Version} loaded. Settings/data: {ModStorage.Root}. Verbose logging: {IsVerbose}.");
+        Log.LogInfo($"HUD Overhaul {Version} loaded. Settings: {CompanionSettings.ConfigPath}. Data: {ModStorage.Root}. Verbose logging: {IsVerbose}.");
     }
 
     internal static bool IsVerbose => ModOptions.VerboseLogging?.Value == true;

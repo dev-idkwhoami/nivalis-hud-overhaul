@@ -8,6 +8,7 @@ installing development builds, and packaging releases.
 - .NET SDK 8 (the mod targets .NET 6; the checks target .NET 8).
 - GNU Make, Bash, and standard Unix utilities (including sed).
 - The game with BepInEx 6 IL2CPP and generated interop assemblies.
+- Mod Companion 1.0.0, installed separately. Development builds use the sibling `mod-companion` project.
 
 Launch the game with BepInEx once before building. The build reads references
 from `BepInEx/core/` and `BepInEx/interop/` in that installation. The first build
@@ -96,12 +97,14 @@ file integrity, not a cryptographic signature or build attestation.
 
 ## Configuration and diagnostics
 
-On first launch, the mod creates `BepInEx/config/HUDOverhaul/`, including
-`HUDOverhaul.cfg`, editable labels, and persistent mod data. Existing legacy
-root-level files migrate automatically. Do not ship your personal config folder.
+Mod Companion owns settings in `BepInEx/config/HUDOverhaul/HUDOverhaul.cfg`.
+New keys use their defaults when absent. There is no migration of legacy setting
+names. Labels, history and other gameplay data stay in
+`BepInEx/config/HUDOverhaul/`; their existing data migration remains intact.
+Do not ship your personal config folder.
 
-Enable `[Logging] Verbose = true` in `HUDOverhaul.cfg` while the game is closed,
-or use the in-game Features checkbox, for detailed diagnostics. Warnings and
+Enable `[Developer] Verbose = true` in the companion-managed HUD config while the
+game is closed, or use HUD Overhaul's Developer category in Mod Companion, for detailed diagnostics. Warnings and
 errors remain enabled otherwise. Diagnostics use BepInEx's shared `LogOutput.log`;
 `HUDOverhaul.history.log` is saved gameplay history, independent of verbosity.
 
@@ -176,3 +179,26 @@ Licensed under the [MIT License](LICENSE).
 
 > [!NOTE]
 > This project was developed with AI assistance, including substantial AI-generated code and documentation. Contributions should be reviewed and tested; generated code may contain mistakes.
+
+## Mod Companion settings
+
+Mod Companion 1.0.0 is required. F5 and the native settings entry open
+its shared menu; HUD Overhaul no longer provides a standalone settings window.
+Choose HUD Overhaul's icon in the top row. Features, Shopping and Farm are custom
+tabs; Controls, Developer and Info use Companion's dedicated section APIs. Controls
+contains Quick Actions and Farm Editor, Developer supplies the standard verbose
+toggle, and Info uses headings and paragraphs for help. Standard/Estimated shopping mode is also exposed and
+stays synchronized with the shopping window's tab selection.
+
+Quick Actions and Farm Editor are configured in the companion's Controls tab.
+Their action registration and binding storage still use the game's input system;
+Farm Editor now has a gamepad binding slot as well. The retired HUD-menu action
+identity is inert, retained only to prevent unknown-action errors when the game
+loads its own existing input save packet; HUD config values are not imported.
+
+Building this version requires the sibling `mod-companion` project. Install its
+DLL separately; HUD packaging does not bundle it. BepInEx will refuse to load
+HUD Overhaul if the dependency is missing. In-game controller/rebinding checks
+remain necessary with both rebuilt DLLs.
+
+The gold HUD logo is embedded in the DLL as `HudOverhaul.Icon.png` and passed to Companion as image bytes. No separate icon file is installed. The source image is in `assets/hud-overhaul-icon.png`.

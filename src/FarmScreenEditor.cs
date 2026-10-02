@@ -1,6 +1,6 @@
 using System.Text.Json;
 using BepInEx;
-using BepInEx.Configuration;
+using NivalisMods.ModCompanion.Api;
 using Nivalis;
 using Nivalis.InventorySystem;
 using Nivalis.UI;
@@ -19,7 +19,7 @@ public sealed class FarmScreenEditor : MonoBehaviour
     private static readonly string FilePath = Path.Combine(ModStorage.Root, "HUDOverhaul.farm-screen-preview.json");
     private static Settings? _settings;
     private static Settings? _defaults;
-    internal static ConfigEntry<bool>? _editing;
+    internal static Setting<bool>? _editing;
     private static bool _placementMode;
     private static TMP_Text? _notice;
     internal static bool Editing => _editing?.Value == true && _placementMode;
@@ -30,11 +30,11 @@ public sealed class FarmScreenEditor : MonoBehaviour
     private static bool _failed;
     public FarmScreenEditor(IntPtr pointer) : base(pointer) { }
 
-    internal static void Initialize(ConfigFile config)
+    internal static void Initialize(SettingsCategory farm)
     {
-        _editing = config.Bind("FarmScreens", "EnablePlacementEditing", false,
+        _editing = farm.Toggle("PlacementEditing", Labels.Get("settings.option.screenEditing"), false,
             "Allow F4 to toggle screen placement editing. Editing starts off; click a screen in editing mode to select it. Enter saves; Backspace cancels.");
-        _editing.SettingChanged += (_, _) => { if (!_editing.Value) ExitMode(); };
+        _editing.Changed += _ => { if (!_editing.Value) ExitMode(); };
     }
     private static Settings Defaults
     {

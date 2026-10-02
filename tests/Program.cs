@@ -383,23 +383,24 @@ try
     File.WriteAllText(Path.Combine(migrationRoot, "HUDOverhaul.farm-targets", "nested", "save.json"), "target-data");
     File.WriteAllText(Path.Combine(migrationRoot, "OtherMod.cfg"), "unrelated");
     ModStorage.Initialize(migrationRoot);
-    Geometry("config migration preserves settings", File.ReadAllText(ModStorage.FilePath("HUDOverhaul.cfg")).Contains("QuickActions = false"));
+    Geometry("legacy settings are ignored and left untouched", File.ReadAllText(oldConfig).Contains("QuickActions = false") && !File.Exists(ModStorage.FilePath("HUDOverhaul.cfg")));
     Geometry("history migration preserves bytes", File.ReadAllBytes(ModStorage.FilePath("HUDOverhaul.history.log")).SequenceEqual(historyBytes));
     Geometry("nested save data migrated", File.ReadAllText(ModStorage.FilePath("HUDOverhaul.farm-targets/nested/save.json")) == "target-data");
-    Geometry("legacy files and empty directories removed", !File.Exists(oldConfig) && !Directory.Exists(Path.Combine(migrationRoot, "HUDOverhaul.farm-targets")));
+    Geometry("legacy files and empty directories removed", File.Exists(oldConfig) && !Directory.Exists(Path.Combine(migrationRoot, "HUDOverhaul.farm-targets")));
     Geometry("unrelated config retained", File.ReadAllText(Path.Combine(migrationRoot, "OtherMod.cfg")) == "unrelated");
     ModStorage.Initialize(migrationRoot);
     Geometry("migration repeat preserves history", File.ReadAllBytes(ModStorage.FilePath("HUDOverhaul.history.log")).SequenceEqual(historyBytes));
-    File.Copy(ModStorage.FilePath("HUDOverhaul.cfg"), oldConfig);
+    var oldHistory = Path.Combine(migrationRoot, "HUDOverhaul.history.log");
+    File.Copy(ModStorage.FilePath("HUDOverhaul.history.log"), oldHistory);
     ModStorage.Initialize(migrationRoot);
-    Geometry("identical legacy duplicate safely removed", !File.Exists(oldConfig));
-    File.WriteAllText(oldConfig, "different settings");
+    Geometry("identical legacy duplicate safely removed", !File.Exists(oldHistory));
+    File.WriteAllText(oldHistory, "different history");
     var oldLabels = Path.Combine(migrationRoot, "HUDOverhaul.labels.json");
     File.WriteAllText(oldLabels, "translation");
     var conflict = false;
     try { ModStorage.Initialize(migrationRoot); } catch (IOException) { conflict = true; }
-    Geometry("conflicts stop migration without replacing data", conflict && File.ReadAllText(oldConfig) == "different settings" && File.ReadAllText(ModStorage.FilePath("HUDOverhaul.cfg")).Contains("QuickActions = false"));
+    Geometry("conflicts stop migration without replacing data", conflict && File.ReadAllText(oldHistory) == "different history" && File.ReadAllBytes(ModStorage.FilePath("HUDOverhaul.history.log")).SequenceEqual(historyBytes));
     Geometry("conflict preflight leaves other files untouched", File.Exists(oldLabels) && !File.Exists(ModStorage.FilePath("HUDOverhaul.labels.json")));
 }
 finally { Directory.Delete(migrationRoot, true); }
-Console.WriteLine($"Passed {checks} checks including config and history migration.");
+Console.WriteLine($"Passed {checks} checks including ignored legacy configs and preserved gameplay data.");

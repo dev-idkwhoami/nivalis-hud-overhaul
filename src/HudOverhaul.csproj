@@ -7,6 +7,8 @@
     <Description>Additional sorting options for game UI lists.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../mod-companion/src/ModCompanion.csproj" Private="false" />
+    <EmbeddedResource Include="../assets/hud-overhaul-icon.png" LogicalName="HudOverhaul.Icon.png" />
     <EmbeddedResource Include="../data/farm-screen-defaults.json" LogicalName="HudOverhaul.FarmScreenDefaults.json" />
     <EmbeddedResource Include="../localization/labels.en.json" LogicalName="HudOverhaul.Labels.en.json" WithCulture="false" />
     <Reference Include="BepInEx.Core" HintPath="$(GamePath)/BepInEx/core/BepInEx.Core.dll" Private="false" />

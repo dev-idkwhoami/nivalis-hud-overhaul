@@ -1,4 +1,4 @@
-using BepInEx.Configuration;
+using NivalisMods.ModCompanion.Api;
 using Nivalis;
 using Nivalis.UI;
 using UnityEngine;
@@ -7,36 +7,38 @@ namespace NivalisMods.HudOverhaul;
 
 internal static class ModOptions
 {
-    internal static ConfigEntry<bool> Search = null!, Sorting = null!, QuickActions = null!, Staff = null!, Quests = null!,
+    internal static Setting<bool> Search = null!, Sorting = null!, QuickActions = null!, Staff = null!, Quests = null!,
         Scan = null!, Conditions = null!, ReviewTime = null!, FastReviews = null!, Sales = null!, Ingredients = null!, Screens = null!;
-    internal static ConfigEntry<bool> VerboseLogging = null!;
-    internal static ConfigEntry<bool> DeductVenueStock = null!;
-    internal static ConfigEntry<int> StockDays = null!, DebounceMs = null!;
-    internal static void Initialize(ConfigFile config)
+    internal static Setting<bool> VerboseLogging = null!;
+    internal static Setting<bool> DeductVenueStock = null!;
+    internal static Setting<int> StockDays = null!, DebounceMs = null!;
+    internal static void Initialize(SettingsCategory features, SettingsCategory shopping, SettingsCategory farm, DeveloperSection developer)
     {
-        VerboseLogging = config.Bind("Logging", "Verbose", false,
-            "Enable detailed HUD Overhaul diagnostics in BepInEx/LogOutput.log. Warnings and errors are always logged. This does not disable saved gameplay history. Restart after editing this file, or use the in-game checkbox.");
-        DeductVenueStock = config.Bind("ShoppingList", "DeductVenueStock", true,
-            "Deduct existing venue ingredient stock in both Standard and Estimated shopping lists. Carried inventory is counted separately.");
-        DeductVenueStock.SettingChanged += (_, _) => Plugin.Guard("Refresh shopping stock mode", EstimatedShopping.RefreshPanels);
-        ConfigEntry<bool> Feature(string name) => config.Bind("Features", name, true, "Enable " + name + ". Changes apply without restarting.");
-        Search = Feature("ExpandedSearch"); Sorting = Feature("AdditionalSorting"); QuickActions = Feature("QuickActions");
-        Staff = Feature("StaffOrdering"); Quests = Feature("PinnedQuestFiltering"); Scan = Feature("DistinctScanColors");
-        Conditions = Feature("ConditionOrder"); ReviewTime = Feature("ReviewTimestamps"); FastReviews = Feature("VirtualReviews");
-        Sales = Feature("SalesStatistics"); Ingredients = Feature("CombinedIngredients"); Screens = Feature("FarmScreens");
-        StockDays = config.Bind("ShoppingList", "StockTargetDays", 1,
-            new ConfigDescription("Days of estimated ingredient demand to stock.", new AcceptableValueRange<int>(1, 14)));
-        DebounceMs = config.Bind("Search", "DebounceMilliseconds", 250,
-            new ConfigDescription("Delay before refreshing search results; zero disables the delay.", new AcceptableValueRange<int>(0, 1000)));
-        Quests.SettingChanged += (_, _) => Plugin.Guard("Refresh quest setting", () =>
+        Setting<bool> Feature(string key, string label) => features.Toggle(key, Labels.Get("settings.option." + label), true);
+        Search = Feature("Search", "search"); Sorting = Feature("Sorting", "sorting");
+        QuickActions = Feature("QuickActions", "quickActions"); Staff = Feature("StaffOrdering", "staff");
+        Quests = Feature("PinnedQuests", "quests"); Scan = Feature("ScanColors", "scan");
+        Conditions = Feature("ConditionOrder", "conditions"); ReviewTime = Feature("ReviewTimestamps", "reviewTime");
+        FastReviews = Feature("FastReviews", "fastReviews"); Sales = Feature("SalesStatistics", "sales");
+        Ingredients = Feature("CombinedIngredients", "ingredients");
+        DebounceMs = features.Stepper("SearchDelayMs", Labels.Get("settings.option.debounce"), 250, 0, 1000, 50);
+        DebounceMs.Hint = "Delay before refreshing search results; zero disables the delay.";
+        DeductVenueStock = shopping.Choice("VenueStock", Labels.Get("settings.option.venueStock"), true,
+            new[] { new Choice<bool>(true, Labels.Get("shopping.stock.deduct")), new Choice<bool>(false, Labels.Get("shopping.stock.ignore")) });
+        StockDays = shopping.Stepper("StockDays", Labels.Get("settings.option.stockDays"), 1, 1, 14);
+        Screens = farm.Toggle("Screens", Labels.Get("settings.option.screens"), true);
+        VerboseLogging = developer.AddVerboseLogging(false,
+            "Detailed diagnostics in BepInEx/LogOutput.log. Saved gameplay history is independent of logging verbosity.");
+        DeductVenueStock.Changed += _ => Plugin.Guard("Refresh shopping stock mode", EstimatedShopping.RefreshPanels);
+        Quests.Changed += _ => Plugin.Guard("Refresh quest setting", () =>
         {
             if (!QuestPatchRegistration.Installed) return;
             QuestTracking.Invalidate();
             foreach (var hud in UnityEngine.Object.FindObjectsOfType<ActiveJournalEntriesUi>()) hud.Refresh();
         });
-        Scan.SettingChanged += (_, _) => { if (!Scan.Value) ScanMarkerColors.RestoreAll(); };
-        Sorting.SettingChanged += (_, _) => Plugin.Guard("Refresh sorting setting", FilterExtension.RefreshSettings);
-        Screens.SettingChanged += (_, _) => Plugin.Guard("Refresh farm screens setting", () =>
+        Scan.Changed += _ => { if (!Scan.Value) ScanMarkerColors.RestoreAll(); };
+        Sorting.Changed += _ => Plugin.Guard("Refresh sorting setting", FilterExtension.RefreshSettings);
+        Screens.Changed += _ => Plugin.Guard("Refresh farm screens setting", () =>
         {
             FarmProduceWheel.Close(); FarmScreenEditor.ExitMode();
             foreach (var screen in Resources.FindObjectsOfTypeAll<FarmScreen>())

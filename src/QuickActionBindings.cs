@@ -9,7 +9,9 @@ namespace NivalisMods.HudOverhaul;
 internal static class QuickActionBindings
 {
     internal const string ActionName = "HUDOverhaulQuickActions";
-    internal const string MenuName = "HUDOverhaulMenu";
+    // Inert action identity retained because native save packets may reference it.
+    // No settings are imported and no HUD menu listens to this action.
+    private const string RetiredMenuAction = "HUDOverhaulMenu";
     internal const string EditName = "HUDOverhaulFarmEditor";
     internal const string MapName = "HUDOverhaul";
     private static bool _rebinding;
@@ -44,12 +46,15 @@ internal static class QuickActionBindings
         InputActionSetupExtensions.AddBinding(action, new InputBinding("", groups: controls.GamepadScheme.bindingGroup)
         { m_Id = "f42a85ee-bd45-473e-a553-d9b878e5fa86" });
         foreach (var (name, key, id, bindingId) in new[] {
-            (MenuName, "f5", "27285b95-ad75-4f7e-b1cc-f32b71c7ee15", "bbef22af-2687-4366-bd18-4a171561409c"),
+            (RetiredMenuAction, "", "27285b95-ad75-4f7e-b1cc-f32b71c7ee15", "bbef22af-2687-4366-bd18-4a171561409c"),
             (EditName, "f4", "f453631d-101b-4866-a2df-26181961e1d5", "d589a6c5-5ba3-4be7-83d7-08a54d9f3a67") })
         {
             var extra = InputActionSetupExtensions.AddAction(map, name, InputActionType.Button, expectedControlLayout: "Button");
             extra.m_Id = id;
-            InputActionSetupExtensions.AddBinding(extra, new InputBinding("<Keyboard>/" + key, groups: controls.KeyboardScheme.bindingGroup) { m_Id = bindingId });
+            InputActionSetupExtensions.AddBinding(extra, new InputBinding(key.Length == 0 ? "" : "<Keyboard>/" + key, groups: controls.KeyboardScheme.bindingGroup) { m_Id = bindingId });
+            if (name == EditName)
+                InputActionSetupExtensions.AddBinding(extra, new InputBinding("", groups: controls.GamepadScheme.bindingGroup)
+                { m_Id = "f3a130ad-51ad-4013-86c6-73d4bfeb0f79" });
         }
         InputActionSetupExtensions.AddActionMap(asset, map);
         Plugin.Verbose("Quick Actions registered in native input settings.");
@@ -60,15 +65,6 @@ internal static class QuickActionBindings
     {
         var action = Find(name);
         return action == null ? Labels.Get("quickActions.unbound") : InputActionRebindingExtensions.GetBindingDisplayString(action, 0);
-    }
-    internal static void Bind(string name, string? path)
-    {
-        var action = Find(name);
-        if (action == null) return;
-        if (path == null) InputActionRebindingExtensions.RemoveBindingOverride(action, 0);
-        else InputActionRebindingExtensions.ApplyBindingOverride(action, 0, path);
-        PlayerInputManager._instance?.RequestSave();
-        RebindingEnded();
     }
     internal static bool Pressed(string name = ActionName)
     {

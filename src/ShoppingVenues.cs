@@ -13,6 +13,7 @@ namespace NivalisMods.HudOverhaul;
 
 public sealed class ShoppingVenues : MonoBehaviour
 {
+    private static readonly System.Reflection.MethodInfo? NativeSortEntries = AccessTools.Method(typeof(ShoppingListPanel), "SortEntries");
     private ShoppingListPanel _panel = null!;
     private TMP_Dropdown _dropdown = null!;
     private Venue? _selected;
@@ -235,7 +236,9 @@ public sealed class ShoppingVenues : MonoBehaviour
         for (var i = 0; i < order.Length; i++) list._itemDisplayInstances[i] = order[i];
         list._displayedInstanceCount = kept.Count;
         list.EndUpdate();
-        _panel.SortEntries();
+        // Some game builds sort inside RefreshItemsList and expose no SortEntries method.
+        if (NativeSortEntries != null) NativeSortEntries.Invoke(_panel, null);
+        else _panel.UpdateNavigation();
         if (list._itemDisplayParent.TryCast<RectTransform>() is { } rect)
             LayoutRebuilder.MarkLayoutForRebuild(rect);
         if (Plugin.IsVerbose) Plugin.Verbose($"Shopping venues: {(_selected == null ? "all" : _selected.EntryName)}, {kept.Count} items, {_venues.Count} venues.");
