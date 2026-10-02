@@ -11,9 +11,9 @@ using Nivalis.GhostSystem.CustomerLoop;
 namespace NivalisMods.HudOverhaul;
 
 [BepInPlugin(Id, "HUD Overhaul", Version)]
-public sealed class Plugin : BasePlugin
+public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.0.0";
+    public const string Version = "1.0.1";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
@@ -44,7 +44,8 @@ public sealed class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<ReviewMetrics>();
         ClassInjector.RegisterTypeInIl2Cpp<VirtualReviews>();
         ClassInjector.RegisterTypeInIl2Cpp<ShoppingVenues>();
-        new Harmony(Id).PatchAll(typeof(Plugin).Assembly);
+        var harmony = new Harmony(Id);
+        QuestPatchRegistration.Install(harmony);
         ExpandedSearch.Install();
         QuickActionsPreview.Initialize();
         QuickActionBindings.Initialize();

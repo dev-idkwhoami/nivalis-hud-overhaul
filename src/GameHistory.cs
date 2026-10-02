@@ -1,4 +1,5 @@
 using BepInEx;
+using HarmonyLib;
 using Nivalis;
 using Nivalis.GhostSystem.CustomerLoop;
 using Nivalis.InventorySystem;
@@ -69,6 +70,7 @@ internal static class GameHistory
             });
         try { Scan(importReceipts: !known, snapshot: true); }
         catch { Clear(); throw; }
+        if (!Active) return;
         _stockDay = TimeOfDayManager.CurrentTime.GameplayGameDay;
         _nextScan = Time.unscaledTime + 5;
         Flush();
@@ -110,6 +112,12 @@ internal static class GameHistory
     {
         if (_storageFailed) { Clear(); return; }
         if (!Active) return;
+        // The persistent pump outlives gameplay. Never let a title-screen scan
+        // create a replacement PlayerManager through the lazy Instance getter.
+        var playerManager = PlayerManager._instance;
+        if (playerManager == null || playerManager.LocalPlayer == null) { Clear(); return; }
+        var scenes = GameSceneManager._instance;
+        if (GameSceneManager.IsUnloadingGameplay || (scenes != null && scenes.IsLoading)) return;
         foreach (var e in Adjustments.Flush(Time.unscaledTime)) Record(e);
         if (Time.unscaledTime >= _nextScan)
         {
@@ -151,8 +159,10 @@ internal static class GameHistory
     }
     private static void Scan(bool importReceipts, bool snapshot)
     {
+        var manager = PlayerManager._instance;
+        if (manager == null || manager.LocalPlayer == null) { Clear(); return; }
         var owned = new Il2CppSystem.Collections.Generic.List<Venue>();
-        PlayerManager.Instance.LocalPlayer.GetOwnedVenues(owned);
+        manager.LocalPlayer.GetOwnedVenues(owned);
         for (var v = 0; v < owned.Count; v++)
         {
             var venue = owned[v]; var runtime = venue.RuntimeData;
@@ -239,4 +249,12 @@ public sealed class HistoryPump : MonoBehaviour
     public HistoryPump(IntPtr pointer) : base(pointer) { }
     public void Update() => GameHistory.Safe("tick", GameHistory.Tick);
     public void OnApplicationQuit() => GameHistory.Safe("shutdown", GameHistory.Shutdown);
+}
+
+[HarmonyPatch(typeof(GameSceneManager), nameof(GameSceneManager.UnloadGameplay))]
+internal static class HistoryUnloadPatch
+{
+    // Stop before the unload coroutine removes managers, not on the next save load.
+    [HarmonyPrefix]
+    private static void Prefix() => GameHistory.Clear();
 }

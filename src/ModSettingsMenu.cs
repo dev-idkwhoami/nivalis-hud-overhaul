@@ -192,11 +192,29 @@ public sealed class ModSettingsMenu : MonoBehaviour
                 Object.DestroyImmediate(controller);
                 NativeUiParts.Relabel(clone, Labels.Get("settings.option." + key));
                 toggle.onValueChanged = new Toggle.ToggleEvent();
-                toggle.interactable = true;
-                toggle.SetIsOnWithoutNotify(entry.Value);
-                toggle.onValueChanged.AddListener(DelegateSupport.ConvertDelegate<UnityAction<bool>>(new Action<bool>(value => entry.Value = value)));
-                _refresh.Add(() => toggle.SetIsOnWithoutNotify(entry.Value));
+                var unavailable = key == "quests" && !QuestPatchRegistration.Installed;
+                toggle.interactable = !unavailable;
+                toggle.SetIsOnWithoutNotify(!unavailable && entry.Value);
+                toggle.onValueChanged.AddListener(DelegateSupport.ConvertDelegate<UnityAction<bool>>(new Action<bool>(value =>
+                {
+                    if (!unavailable) entry.Value = value;
+                })));
+                _refresh.Add(() => toggle.SetIsOnWithoutNotify(!unavailable && entry.Value));
                 clone.SetActive(true);
+                if (unavailable)
+                {
+                    var font = toggleTemplate.GetComponentInChildren<TMP_Text>(true);
+                    var note = NativeUiParts.Text(contents[page], font, QuestPatchRegistration.UnavailableText);
+                    note.gameObject.name = "HUDOverhaul.QuestCompatibilityNote";
+                    note.fontSize = 14;
+                    var color = note.color; color.a *= .6f; note.color = color;
+                    note.alignment = TextAlignmentOptions.Center;
+                    note.enableWordWrapping = true;
+                    note.overflowMode = TextOverflowModes.Overflow;
+                    note.margin = new Vector4(12, 0, 12, 8);
+                    var layout = note.gameObject.AddComponent<LayoutElement>();
+                    layout.minHeight = 32; layout.flexibleHeight = 0;
+                }
             }
             void Step(int page, string key, ConfigEntry<int> entry, int min, int max, int step)
             {

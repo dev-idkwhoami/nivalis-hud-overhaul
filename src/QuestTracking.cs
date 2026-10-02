@@ -56,11 +56,16 @@ internal static class QuestPinChangedPatch
 [HarmonyPatch(typeof(ActiveJournalEntriesUi), nameof(ActiveJournalEntriesUi.Refresh))]
 internal static class PinnedHudQuestsPatch
 {
+    private static readonly QuestFilterBackoff Backoff = new(
+        AccessTools.Method(typeof(ActiveJournalEntriesUi), nameof(ActiveJournalEntriesUi.Refresh)),
+        Plugin.Id, message => Plugin.Logger.LogInfo(message));
+
     [HarmonyPostfix]
     private static void Postfix(ActiveJournalEntriesUi __instance)
     {
         try
         {
+            if (!ModOptions.Quests.Value || Backoff.ShouldBackOff()) return;
             var filter = QuestTracking.Capture(fresh: true);
             if (!filter.HasPins) return;
             // Native Refresh already puts pinned quests first. Hide its unpinned
@@ -88,6 +93,9 @@ internal static class PinnedHudQuestsPatch
 internal static class PinnedCompassQuestsPatch
 {
     private static readonly Stack<MarkerList> Available = new();
+    private static readonly QuestFilterBackoff Backoff = new(
+        AccessTools.Method(typeof(NavigationUI), nameof(NavigationUI.LateUpdate)),
+        Plugin.Id, message => Plugin.Logger.LogInfo(message));
 
     internal sealed class DisplayScope
     {
@@ -110,6 +118,8 @@ internal static class PinnedCompassQuestsPatch
         MarkerList? filtered = null;
         try
         {
+            // Leave __state null so our finalizer also does nothing when yielding.
+            if (!ModOptions.Quests.Value || Backoff.ShouldBackOff()) return;
             var filter = QuestTracking.Capture();
             if (!filter.HasPins) return;
             var manager = NavigationManager.Instance;

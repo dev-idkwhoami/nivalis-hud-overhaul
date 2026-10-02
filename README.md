@@ -105,6 +105,53 @@ or use the in-game Features checkbox, for detailed diagnostics. Warnings and
 errors remain enabled otherwise. Diagnostics use BepInEx's shared `LogOutput.log`;
 `HUDOverhaul.history.log` is saved gameplay history, independent of verbosity.
 
+## Quest mod compatibility
+
+When Tracked Quests HUD is present, an optional load-order dependency makes it
+load first. HUD Overhaul then skips registration of its entire quest-filter
+module: compass filtering, quest-panel filtering, and pin-change invalidation.
+It also skips that module if another owner already patches either
+`NavigationUI.LateUpdate` or `ActiveJournalEntriesUi.Refresh` at startup. No
+HUD Overhaul quest callbacks or finalizers are installed in that case. A concise
+startup message identifies why the module was excluded.
+
+Other features, including journal search/sorting and Combined Ingredients, still
+load. Your saved quest-filter setting is preserved, but cannot enable the skipped
+module during that session. The menu shows the option off and disabled, with a
+small explanation naming the installed provider. Restart without the other
+provider to enable it again; the saved preference is retained.
+
+If our quest module was installed, runtime back-off checks remain as a secondary
+guard for patches added later, independently for each display. These checks skip
+filter execution; they do not remove installed hooks. The log names overlapping
+owners once when that state changes, even with verbose logging off. No other
+mod is unpatched.
+
+This is conservative: Harmony identifies hooks, not whether a hook actually
+filters quests. Direct native hooks and modifications through other methods are
+not detected. Restart after updating from a build affected by the compass-list
+conflict; backing off cannot reconstruct markers already lost in that session.
+
+Run `make test-quest-backoff GAME_PATH="../Nivalis Nights"` for isolated back-off
+checks using the installed Harmony metadata types. These cover foreign patch
+types, later registration/removal, independent display filters, and inspection
+failure. They do not install native detours or replace an in-game coexistence test.
+
+To support another known quest mod, edit `src/QuestModCompatibility.cs`: add its
+plugin GUID and display name to `Providers`, and add a matching soft-dependency
+attribute at the top of that same file. Optional Harmony owner IDs can be listed
+on the provider when they differ from its plugin GUID. No changes to patch
+registration or menu code are required. The compatibility checks verify every
+catalog entry has its optional load-order declaration. Unlisted owners are still
+detected through Harmony; matching plugin metadata supplies their display name.
+
+Overlapping Combined Ingredients rows were reproduced by disabling the copied
+list layout. The window now restores its copied layout components so it works
+even when the native Statistics window's layout was disabled when copied. This
+is separate from the compass conflict; a direct connection to Tracked Quests HUD
+was not established. Main-menu Controls rows likewise restore their layout and
+register with the native canvas manager.
+
 ## Source layout
 
 ```text

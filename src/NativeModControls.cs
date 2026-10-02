@@ -3,6 +3,7 @@ using Nivalis;
 using Nivalis.UI.Concrete;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace NivalisMods.HudOverhaul;
@@ -47,12 +48,28 @@ internal static class NativeModControls
                 __instance.controls.Add(row);
                 clone.transform.SetParent(source.transform.parent, false);
                 clone.transform.SetAsLastSibling();
+                RestoreLayout(clone);
                 clone.SetActive(true);
                 Relabel(row);
             }
         }
         finally { Object.Destroy(staging); }
     });
+
+    private static void RestoreLayout(GameObject clone)
+    {
+        // The main menu's canvas manager disables the template's layout while
+        // Settings is hidden. Clones inherit that state, but not registration
+        // with the manager, so their labels otherwise keep a zero-width rect.
+        var manager = clone.GetComponentInParent<CanvasBehaviourManager>(true);
+        var hidden = manager != null && !manager.GetCanvasIsEnabled();
+        foreach (var layout in clone.GetComponentsInChildren<LayoutGroup>(true))
+        {
+            layout.enabled = true;
+            if (manager != null)
+                manager.RegisterElementToDisable(layout, true, hidden);
+        }
+    }
 
     internal static void Relabel(InputRebindUI row)
     {

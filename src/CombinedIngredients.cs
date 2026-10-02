@@ -62,6 +62,9 @@ public sealed class CombinedIngredients : MonoBehaviour
             // Narrow the framed window, retaining the full-screen dimmer and
             // native vertical layout. Children follow the new width naturally.
             var frame = _view.transform.Find("Wrapper").GetComponent<RectTransform>();
+            // The source canvas manager may have disabled layout while hidden.
+            // This independent window does not inherit that manager's registry.
+            frame.GetComponent<VerticalLayoutGroup>().enabled = true;
             frame.anchorMin = new Vector2(0.18f, frame.anchorMin.y);
             frame.anchorMax = new Vector2(0.82f, frame.anchorMax.y);
             frame.sizeDelta = new Vector2(-80, frame.sizeDelta.y);
@@ -73,6 +76,10 @@ public sealed class CombinedIngredients : MonoBehaviour
             if (list != null) Object.DestroyImmediate(list);
             _scroll = scrollObject.GetComponent<ScrollRect>();
             _scroll.onValueChanged = new ScrollRect.ScrollRectEvent();
+            // Restore the copied list even when Statistics was hidden at clone
+            // time; otherwise all new rows retain the same default position.
+            _scroll.content.GetComponent<VerticalLayoutGroup>().enabled = true;
+            _scroll.content.GetComponent<ContentSizeFitter>().enabled = true;
             // Statistics-specific sections and period tabs do not apply here.
             for (var i = body.childCount - 1; i >= 0; i--)
                 Object.DestroyImmediate(body.GetChild(i).gameObject);

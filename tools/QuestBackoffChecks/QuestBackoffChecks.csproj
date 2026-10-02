@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputPath>bin/</OutputPath>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/QuestFilterBackoff.cs" Link="QuestFilterBackoff.cs" />
+    <Compile Include="../../src/QuestModCompatibility.cs" Link="QuestModCompatibility.cs" />
+    <Reference Include="$(GamePath)/BepInEx/core/BepInEx.Core.dll" />
+    <Reference Include="$(GamePath)/BepInEx/core/0Harmony.dll" />
+    <Reference Include="$(GamePath)/BepInEx/core/MonoMod.*.dll" />
+    <Reference Include="$(GamePath)/BepInEx/core/Mono.Cecil*.dll" />
+  </ItemGroup>
+</Project>

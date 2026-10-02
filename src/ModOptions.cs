@@ -30,6 +30,7 @@ internal static class ModOptions
             new ConfigDescription("Delay before refreshing search results; zero disables the delay.", new AcceptableValueRange<int>(0, 1000)));
         Quests.SettingChanged += (_, _) => Plugin.Guard("Refresh quest setting", () =>
         {
+            if (!QuestPatchRegistration.Installed) return;
             QuestTracking.Invalidate();
             foreach (var hud in UnityEngine.Object.FindObjectsOfType<ActiveJournalEntriesUi>()) hud.Refresh();
         });
