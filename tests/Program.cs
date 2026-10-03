@@ -314,6 +314,7 @@ Geometry("ingredients combine across dishes and compare periods", ingredients.Fi
 Console.WriteLine($"Passed {checks} total checks including ingredient counts and save-bound payroll.");
 
 HistoryChecks.Run(Geometry);
+PerformanceChecks.Run(Geometry);
 Console.WriteLine($"Passed {checks} total checks including file history, save branches and adjustment grouping.");
 
 var farmPath = Path.Combine(Path.GetTempPath(), "hud-farm-targets-" + Guid.NewGuid());

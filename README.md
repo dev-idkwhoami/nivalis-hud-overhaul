@@ -8,7 +8,7 @@ installing development builds, and packaging releases.
 - .NET SDK 8 (the mod targets .NET 6; the checks target .NET 8).
 - GNU Make, Bash, and standard Unix utilities (including sed).
 - The game with BepInEx 6 IL2CPP and generated interop assemblies.
-- Mod Companion 1.0.0, included in the archive.
+- Mod Companion 1.0.1, included in the archive.
 
 Launch the game with BepInEx once before building. The build reads references
 from `BepInEx/core/` and `BepInEx/interop/` in that installation. The first build
@@ -110,35 +110,64 @@ errors remain enabled otherwise. Diagnostics use BepInEx's shared `LogOutput.log
 
 ## Quest mod compatibility
 
-When Tracked Quests HUD is present, an optional load-order dependency makes it
-load first. HUD Overhaul then skips registration of its entire quest-filter
-module: compass filtering, quest-panel filtering, and pin-change invalidation.
-It also skips that module if another owner already patches either
-`NavigationUI.LateUpdate` or `ActiveJournalEntriesUi.Refresh` at startup. No
-HUD Overhaul quest callbacks or finalizers are installed in that case. A concise
-startup message identifies why the module was excluded.
+Quest hooks are deferred until BepInEx reports that all plugins have loaded,
+and registered on the next Unity update, after startup event handlers return.
+Compatibility is checked once at that point. Tracked Quests HUD's optional
+load-order dependency is retained, and its presence disables the entire quest
+module. Another Harmony owner on `NavigationUI.LateUpdate` or
+`ActiveJournalEntriesUi.Refresh` also prevents registration. No quest lifecycle,
+HUD, compass, or marker-registry hooks are installed when blocked, and the module
+never subscribes to quest events. Other HUD features install normally during Load.
 
-Other features, including journal search/sorting and Combined Ingredients, still
-load. Your saved quest-filter setting is preserved, but cannot enable the skipped
-module during that session. The menu shows the option off and disabled, with a
-small explanation naming the installed provider. Restart without the other
-provider to enable it again; the saved preference is retained.
+Your saved quest-filter setting is preserved, but cannot enable a skipped module
+during that session. The menu shows the option disabled with an explanation.
+Restart after changing installed quest mods. There is no runtime compatibility
+polling or support for changing patch ownership after this startup decision.
+Harmony identifies hooks, not what those hooks do; direct native modifications
+outside Harmony are not detected. A failed partial installation rolls back only
+our dedicated quest-module patches.
 
-If our quest module was installed, runtime back-off checks remain as a secondary
-guard for patches added later, independently for each display. These checks skip
-filter execution; they do not remove installed hooks. The log names overlapping
-owners once when that state changes, even with verbose logging off. No other
-mod is unpatched.
+Run `make test-quest-backoff GAME_PATH="../Nivalis Nights"` for ownership and
+provider-metadata checks against the installed Harmony types. Run
+`make test-quest-runtime` (also included in `make test`) for the production quest
+selection/cache callbacks against managed stand-ins for native game objects,
+and the startup installer against a recording patcher.
+These cover startup gating, notifications, unchanged frames, marker replacement,
+registrations during drawing, exception cleanup, and save/manager replacement.
+They do not replace an in-game IL2CPP detour or coexistence test.
 
-This is conservative: Harmony identifies hooks, not whether a hook actually
-filters quests. Direct native hooks and modifications through other methods are
-not detected. Restart after updating from a build affected by the compass-list
-conflict; backing off cannot reconstruct markers already lost in that session.
+### Background work
 
-Run `make test-quest-backoff GAME_PATH="../Nivalis Nights"` for isolated back-off
-checks using the installed Harmony metadata types. These cover foreign patch
-types, later registration/removal, independent display filters, and inspection
-failure. They do not install native detours or replace an in-game coexistence test.
+Quest selection is invalidated by native pin, progress, quest-start, and
+quest-completion notifications. HUD refreshes also request current state. Save
+clears and manager destruction detach listeners and discard cached state. There
+is no quest-state polling timer. Unchanged pin selections keep the same revision,
+so ordinary progress notifications do not rebuild the compass view unnecessarily.
+
+While the feature is enabled and an active quest is pinned, the compass uses a
+cached secondary marker list. It rebuilds only when the pin selection, manager,
+source list, or native list version changes. The game's quest-assignment setter
+unregisters/re-registers a marker, which changes that version. Direct third-party
+writes to marker fields without those native callbacks are not tracked. Moving
+targets remain live because the view contains the original marker objects.
+
+Native `NavigationUI.LateUpdate` reads the manager's list field directly, with no
+list parameter or filter callback. We therefore select the cached list only for
+that draw and restore the original registry in a finalizer. No list is rebuilt
+on unchanged frames. Marker registration/removal during a draw is routed to the
+original registry so those changes survive restoration. With the feature off or
+no active pins, the compass uses its original list without substitution.
+
+History reconciliation is scheduled every five seconds without overlapping
+scans, and advances by at most eight
+steps per frame, stopping between steps after 0.5 ms. Menu and staff entries are
+individual steps. Each inventory snapshot remains one indivisible step to avoid
+mixing stock from different frames; that step can exceed the time budget. Load
+baselines and receipt imports remain synchronous, and file writes use the worker.
+Pending scans are canceled when gameplay unloads or another save is loaded.
+
+The bundled Mod Companion adds its settings entry when the native settings panel
+opens, without repeatedly searching loaded objects during gameplay.
 
 To support another known quest mod, edit `src/QuestModCompatibility.cs`: add its
 plugin GUID and display name to `Providers`, and add a matching soft-dependency
@@ -182,7 +211,7 @@ Licensed under the [MIT License](LICENSE).
 
 ## Mod Companion settings
 
-Mod Companion 1.0.0 is required and included. F5 and the native settings entry open
+Mod Companion 1.0.1 is required and included. F5 and the native settings entry open
 its shared menu; HUD Overhaul no longer provides a standalone settings window.
 Choose HUD Overhaul's icon in the top row. Features, Shopping and Farm are custom
 tabs; Controls, Developer and Info use Companion's dedicated section APIs. Controls

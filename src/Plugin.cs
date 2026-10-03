@@ -14,7 +14,7 @@ namespace NivalisMods.HudOverhaul;
 [BepInDependency(SettingsRegistry.PluginId, SettingsRegistry.PluginVersion)]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.0";
+    public const string Version = "1.1.1";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
@@ -26,6 +26,7 @@ public sealed partial class Plugin : BasePlugin
         CompanionSettings.Register();
         ClassInjector.RegisterTypeInIl2Cpp<CombinedIngredients>();
         ClassInjector.RegisterTypeInIl2Cpp<HistoryPump>();
+        ClassInjector.RegisterTypeInIl2Cpp<QuestStartup>();
         ClassInjector.RegisterTypeInIl2Cpp<FarmScreenEditor>();
         ClassInjector.RegisterTypeInIl2Cpp<FarmScreens>();
         ClassInjector.RegisterTypeInIl2Cpp<FarmScreenHost>();
@@ -52,6 +53,7 @@ public sealed partial class Plugin : BasePlugin
         Payroll.Initialize();
         Guard("Initialize history", GameHistory.Initialize);
         AddComponent<HistoryPump>();
+        AddComponent<QuestStartup>();
         AddComponent<FarmScreenEditor>();
         AddComponent<FarmScreens>();
         // Own the input listener through BepInEx, independently of scene UI startup.

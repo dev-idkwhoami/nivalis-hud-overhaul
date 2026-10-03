@@ -21,6 +21,7 @@ internal sealed class HistoryAdjustments
 {
     private sealed record Pending(HistoryEvent First, HistoryEvent Last, double At, int Steps);
     private readonly Dictionary<string, Pending> _pending = new();
+    internal bool HasPending => _pending.Count != 0;
     internal IEnumerable<HistoryEvent> Change(HistoryEvent step, double now)
     {
         var key = step.Kind + ":" + step.Venue + ":" + step.Subject;

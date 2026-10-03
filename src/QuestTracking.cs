@@ -10,27 +10,62 @@ namespace NivalisMods.HudOverhaul;
 
 internal static class QuestTracking
 {
-    private static readonly List<QuestPinState> States = new();
     private static QuestPinFilter _snapshot = new(Array.Empty<QuestPinState>());
-    private static int _frame = -1;
-    private static IntPtr _manager;
+    private static QuestPinFilter _next = new(Array.Empty<QuestPinState>());
+    private static QuestManager? _manager;
+    private static bool _dirty = true;
     private static bool _reportedError;
+    internal static int Revision { get; private set; }
+    private static readonly Il2CppSystem.Action Changed = (Il2CppSystem.Action)Invalidate;
+    private static readonly Il2CppSystem.Action<Quest> QuestChanged = (Il2CppSystem.Action<Quest>)(_ => Invalidate());
 
-    internal static void Invalidate() => _frame = -1;
+    internal static void Invalidate() => _dirty = true;
+
+    internal static void Bind(QuestManager? manager)
+    {
+        if (manager?.Pointer == _manager?.Pointer) return;
+        Reset();
+        _manager = manager;
+        if (manager == null) return;
+        manager.OnQuestsPinnedChanged.AddListener(Changed);
+        manager.OnQuestsUpdated.AddListener(Changed);
+        manager.OnQuestStarted.AddListener(QuestChanged);
+        manager.OnQuestCompleted.AddListener(QuestChanged);
+    }
+
+    internal static void Reset()
+    {
+        if (_manager != null)
+        {
+            _manager.OnQuestsPinnedChanged.RemoveListener(Changed);
+            _manager.OnQuestsUpdated.RemoveListener(Changed);
+            _manager.OnQuestStarted.RemoveListener(QuestChanged);
+            _manager.OnQuestCompleted.RemoveListener(QuestChanged);
+        }
+        _manager = null;
+        _snapshot.Clear(); _next.Clear();
+        _dirty = true;
+        Revision++;
+        CompassQuestView.Reset();
+    }
 
     internal static QuestPinFilter Capture(bool fresh = false)
     {
-        var manager = QuestManager.Instance;
-        var pointer = manager == null ? IntPtr.Zero : manager.Pointer;
-        if (!fresh && _frame == Time.frameCount && pointer == _manager) return _snapshot;
-        States.Clear();
-        if (ModOptions.Quests.Value && manager != null && manager._activeQuests != null)
-            foreach (var entry in manager._activeQuests.Values)
+        // The pointer check also handles a manager that predates registration.
+        // No quest collection is read until a notification or HUD refresh.
+        Bind(QuestManager._instance);
+        if (!fresh && !_dirty) return _snapshot;
+        _next.Clear();
+        if (ModOptions.Quests.Value && _manager != null && _manager._activeQuests != null)
+            foreach (var entry in _manager._activeQuests.Values)
                 if (entry != null && entry.Quest != null)
-                    States.Add(new QuestPinState(entry.Quest.Pointer.ToInt64(), entry.IsActive, entry.Pinned));
-        _snapshot = new QuestPinFilter(States);
-        _manager = pointer;
-        _frame = Time.frameCount;
+                    _next.Add(new QuestPinState(entry.Quest.Pointer.ToInt64(), entry.IsActive, entry.Pinned));
+        if (!_snapshot.SameSelection(_next))
+        {
+            (_snapshot, _next) = (_next, _snapshot);
+            Revision++;
+        }
+        _dirty = false;
         return _snapshot;
     }
 
@@ -44,28 +79,35 @@ internal static class QuestTracking
     }
 }
 
-// The setter raises native events synchronously, so invalidate before its listeners
-// refresh the HUD. Pin preferences and their save/load behavior remain native.
-[HarmonyPatch(typeof(RuntimeQuest), nameof(RuntimeQuest.Pinned), MethodType.Setter)]
-internal static class QuestPinChangedPatch
+// These hooks belong to the deferred quest module too: a conflicting provider
+// gets no subscriptions, invalidation callbacks, or compass hooks from us.
+[HarmonyPatch(typeof(QuestManager))]
+internal static class QuestManagerLifecyclePatch
+{
+    [HarmonyPostfix, HarmonyPatch(nameof(QuestManager.InitializeExternal))]
+    private static void Initialized(QuestManager __instance) =>
+        Plugin.Guard("Subscribe to quest changes", () => QuestTracking.Bind(__instance));
+
+    [HarmonyPrefix, HarmonyPatch(nameof(QuestManager.OnDestroyInternal))]
+    private static void Destroying() => Plugin.Guard("Unsubscribe from quest changes", QuestTracking.Reset);
+}
+
+[HarmonyPatch(typeof(SerializationManager), nameof(SerializationManager.Clear))]
+internal static class QuestSaveLifecyclePatch
 {
     [HarmonyPrefix]
-    private static void Prefix() => QuestTracking.Invalidate();
+    private static void Prefix() => Plugin.Guard("Reset quest selection", QuestTracking.Reset);
 }
 
 [HarmonyPatch(typeof(ActiveJournalEntriesUi), nameof(ActiveJournalEntriesUi.Refresh))]
 internal static class PinnedHudQuestsPatch
 {
-    private static readonly QuestFilterBackoff Backoff = new(
-        AccessTools.Method(typeof(ActiveJournalEntriesUi), nameof(ActiveJournalEntriesUi.Refresh)),
-        Plugin.Id, message => Plugin.Logger.LogInfo(message));
-
     [HarmonyPostfix]
     private static void Postfix(ActiveJournalEntriesUi __instance)
     {
         try
         {
-            if (!ModOptions.Quests.Value || Backoff.ShouldBackOff()) return;
+            if (!ModOptions.Quests.Value) return;
             var filter = QuestTracking.Capture(fresh: true);
             if (!filter.HasPins) return;
             // Native Refresh already puts pinned quests first. Hide its unpinned
@@ -92,68 +134,53 @@ internal static class PinnedHudQuestsPatch
 [HarmonyPatch(typeof(NavigationUI), nameof(NavigationUI.LateUpdate))]
 internal static class PinnedCompassQuestsPatch
 {
-    private static readonly Stack<MarkerList> Available = new();
-    private static readonly QuestFilterBackoff Backoff = new(
-        AccessTools.Method(typeof(NavigationUI), nameof(NavigationUI.LateUpdate)),
-        Plugin.Id, message => Plugin.Logger.LogInfo(message));
-
-    internal sealed class DisplayScope
+    internal readonly struct DisplayScope
     {
-        internal readonly NavigationManager Manager;
-        internal readonly MarkerList Original;
-        internal readonly MarkerList Filtered;
+        internal readonly NavigationManager? Manager;
+        internal readonly MarkerList? Original;
 
-        internal DisplayScope(NavigationManager manager, MarkerList original, MarkerList filtered)
+        internal DisplayScope(NavigationManager manager, MarkerList original)
         {
             Manager = manager;
             Original = original;
-            Filtered = filtered;
         }
     }
 
     [HarmonyPrefix]
-    private static void Prefix(out DisplayScope? __state)
+    private static void Prefix(out DisplayScope __state)
     {
-        __state = null;
-        MarkerList? filtered = null;
+        __state = default;
         try
         {
-            // Leave __state null so our finalizer also does nothing when yielding.
-            if (!ModOptions.Quests.Value || Backoff.ShouldBackOff()) return;
+            // Leave the manager null so our finalizer does nothing when yielding.
+            if (!ModOptions.Quests.Value || CompassQuestView.DrawingManager != null) return;
             var filter = QuestTracking.Capture();
             if (!filter.HasPins) return;
             var manager = NavigationManager.Instance;
             if (manager == null || manager._markers == null) return;
             var original = manager._markers;
-            filtered = Available.Count > 0 ? Available.Pop() : new MarkerList();
-            filtered.Clear();
-            for (var i = 0; i < original.Count; i++)
-            {
-                var marker = original[i];
-                if (marker != null && filter.ShowCompassMarker(QuestTracking.Id(marker.Quest))) filtered.Add(marker);
-            }
-            // Filter BEFORE native grouping, otherwise an unpinned number can
-            // remain inside a combined destination icon containing pinned quests.
-            // The registered list is never edited. Give only this synchronous draw
-            // a filtered view, and restore the original even if native drawing fails.
-            __state = new DisplayScope(manager, original, filtered);
+            var filtered = CompassQuestView.Get(manager, original, filter, QuestTracking.Revision);
+            // Native LateUpdate reads _markers directly (the getter is inlined).
+            // Select the cached view for this draw; never edit the registry.
+            __state = new DisplayScope(manager, original);
+            CompassQuestView.DrawingManager = manager;
+            CompassQuestView.DrawingSource = original;
             manager._markers = filtered;
         }
         catch (Exception e)
         {
-            if (__state != null) __state.Manager._markers = __state.Original;
-            __state = null;
-            if (filtered != null) { filtered.Clear(); Available.Push(filtered); }
+            if (__state.Manager != null && __state.Original != null) __state.Manager._markers = __state.Original;
+            __state = default;
+            CompassQuestView.EndDraw();
             QuestTracking.Report(e);
         }
     }
 
     [HarmonyFinalizer]
-    private static void Finalizer(DisplayScope? __state)
+    private static void Finalizer(DisplayScope __state)
     {
-        if (__state == null) return;
-        __state.Manager._markers = __state.Original;
-        __state.Filtered.Clear();
-        Available.Push(__state.Filtered);
+        if (__state.Manager == null || __state.Original == null) return;
+        try { __state.Manager._markers = __state.Original; }
+        finally { CompassQuestView.EndDraw(); }
     }
 }

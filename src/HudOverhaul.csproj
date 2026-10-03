@@ -3,7 +3,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Nivalis.HudOverhaul</AssemblyName>
     <RootNamespace>NivalisMods.HudOverhaul</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Description>Additional sorting options for game UI lists.</Description>
   </PropertyGroup>
   <ItemGroup>

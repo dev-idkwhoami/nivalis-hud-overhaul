@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputPath>bin/</OutputPath>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/QuestTracking.cs" Link="QuestTracking.cs" />
+    <Compile Include="../../src/QuestPinFilter.cs" Link="QuestPinFilter.cs" />
+    <Compile Include="../../src/CompassQuestView.cs" Link="CompassQuestView.cs" />
+    <Compile Include="../../src/QuestStartupGate.cs" Link="QuestStartupGate.cs" />
+    <Compile Include="../../src/QuestPatchRegistration.cs" Link="QuestPatchRegistration.cs" />
+    <Compile Include="../../src/QuestFilterBackoff.cs" Link="QuestFilterBackoff.cs" />
+    <Compile Include="../../src/QuestModCompatibility.cs" Link="QuestModCompatibility.cs" />
+  </ItemGroup>
+</Project>

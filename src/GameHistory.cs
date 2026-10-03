@@ -18,9 +18,11 @@ internal static class GameHistory
     private static readonly Dictionary<IntPtr, Venue> Inventories = new();
     private static readonly HashSet<string> KnownVenues = new();
     private static readonly HashSet<string> Errors = new();
+    private static readonly FrameWork ScanWork = new();
+    private static Il2CppSystem.Collections.Generic.List<Venue>? _ownedVenues;
     private static string? _pendingSave;
     private static float _nextScan, _nextFlush;
-    private static int _stockDay;
+    private static int _stockDay, _scanDay;
     internal static bool Active { get; private set; }
     internal static void Initialize()
     {
@@ -36,12 +38,15 @@ internal static class GameHistory
     {
         // Do not flush pending summaries across save boundaries.
         Active = false; Buffer.Clear(); Adjustments.Clear(); Values.Clear();
+        ScanWork.Dispose();
+        _ownedVenues?.Clear();
         Inventories.Clear(); KnownVenues.Clear(); SaleCapture.Current = null;
     }
     private static void Start()
     {
         var name = _pendingSave; _pendingSave = null;
         Clear();
+        if (PlayerManager._instance?.LocalPlayer == null) return;
         _worker ??= new HistoryWorker(Path.Combine(ModStorage.Root, "HUDOverhaul.history.log"),
             e => { _storageFailed = true; Plugin.Logger.LogError($"History storage stopped; gameplay is unaffected: {e}"); });
         var hash = name == null ? "" : Payroll.SaveHash(name);
@@ -68,7 +73,9 @@ internal static class GameHistory
                 Money = p.Amount,
                 Source = "legacy_daily_import"
             });
-        try { Scan(importReceipts: !known, snapshot: true); }
+        // Load baselines and receipt imports must finish before gameplay starts.
+        // Only the recurring reconciliation is spread across frames.
+        try { foreach (var _ in Scan(importReceipts: !known, snapshot: true)) { } }
         catch { Clear(); throw; }
         if (!Active) return;
         _stockDay = TimeOfDayManager.CurrentTime.GameplayGameDay;
@@ -118,12 +125,18 @@ internal static class GameHistory
         if (playerManager == null || playerManager.LocalPlayer == null) { Clear(); return; }
         var scenes = GameSceneManager._instance;
         if (GameSceneManager.IsUnloadingGameplay || (scenes != null && scenes.IsLoading)) return;
-        foreach (var e in Adjustments.Flush(Time.unscaledTime)) Record(e);
-        if (Time.unscaledTime >= _nextScan)
+        if (Adjustments.HasPending)
+            foreach (var e in Adjustments.Flush(Time.unscaledTime)) Record(e);
+        if (!ScanWork.Pending && Time.unscaledTime >= _nextScan)
         {
             _nextScan = Time.unscaledTime + 5;
-            var day = TimeOfDayManager.CurrentTime.GameplayGameDay;
-            Scan(false, day != _stockDay); _stockDay = day;
+            _scanDay = TimeOfDayManager.CurrentTime.GameplayGameDay;
+            ScanWork.Start(Scan(false, _scanDay != _stockDay));
+        }
+        if (ScanWork.Pending)
+        {
+            ScanWork.Tick();
+            if (!ScanWork.Pending) _stockDay = _scanDay;
         }
         if (Time.unscaledTime >= _nextFlush || Buffer.Count >= 256) Flush();
     }
@@ -148,6 +161,7 @@ internal static class GameHistory
     }
     internal static void Shutdown()
     {
+        ScanWork.Dispose();
         Flush(true); _worker?.Dispose(); _worker = null; Active = false;
     }
     internal static bool Owned(Venue? venue) => venue != null && venue.PlayerOwned;
@@ -157,34 +171,44 @@ internal static class GameHistory
         Record(Event("stock_movement", venue.Guid, change.Type.Guid, change.Type.Name) with
         { Quantity = change.CountChange, Source = "venue_inventory_notification" });
     }
-    private static void Scan(bool importReceipts, bool snapshot)
+    private static IEnumerable<bool> Scan(bool importReceipts, bool snapshot)
     {
         var manager = PlayerManager._instance;
-        if (manager == null || manager.LocalPlayer == null) { Clear(); return; }
-        var owned = new Il2CppSystem.Collections.Generic.List<Venue>();
+        if (manager == null || manager.LocalPlayer == null) yield break;
+        var owned = _ownedVenues ??= new Il2CppSystem.Collections.Generic.List<Venue>();
+        owned.Clear();
         manager.LocalPlayer.GetOwnedVenues(owned);
+        yield return true;
         for (var v = 0; v < owned.Count; v++)
         {
-            var venue = owned[v]; var runtime = venue.RuntimeData;
-            if (runtime == null) continue;
+            var venue = owned[v];
+            if (!Owned(venue) || venue.RuntimeData == null) { yield return true; continue; }
+            var runtime = venue.RuntimeData;
             var first = KnownVenues.Add(venue.Guid);
             if (first) Record(Event("venue_baseline", venue.Guid, venue.Guid, venue.EntryName));
             var inventory = runtime.InventoryData.itemContainer;
             Inventories[inventory.Pointer] = venue;
             if (runtime.JointInventory != null) Inventories[runtime.JointInventory.Pointer] = venue;
+            yield return true;
             var menu = runtime.Menu;
             for (var m = 0; m < menu.Count; m++)
             {
+                if (!Owned(venue)) break;
                 var meal = menu[m]; var item = meal.Meal;
                 if (item != null) Observe("meal_price", venue.Guid, item.Guid, item.Name, meal.Price);
+                yield return true;
             }
             var staff = runtime.Staff;
-            var n = staff.Cast<Il2CppSystem.Collections.Generic.IReadOnlyCollection<Nivalis.GhostSystem.Ai.Person>>().Count;
-            for (var s = 0; s < n; s++)
+            // Re-read the count after each yield: hiring/firing can change it.
+            var roster = staff.Cast<Il2CppSystem.Collections.Generic.IReadOnlyCollection<Nivalis.GhostSystem.Ai.Person>>();
+            for (var s = 0; s < roster.Count; s++)
             {
+                if (!Owned(venue)) break;
                 var person = staff[s];
                 Observe("staff_wage", venue.Guid, person.Guid, person.Name, person.RuntimeData.Wage);
+                yield return true;
             }
+            if (!Owned(venue)) continue;
             if (snapshot || first)
             {
                 // Each snapshot is complete, including an empty inventory marker.
@@ -195,6 +219,7 @@ internal static class GameHistory
                 while (items.Cast<Il2CppSystem.Collections.IEnumerator>().MoveNext()) { var stack = items.Current; if (stack?.Type != null) counts[stack.Type] = counts.GetValueOrDefault(stack.Type) + stack.StackCount; }
                 foreach (var pair in counts)
                     Record(Event("stock_snapshot", venue.Guid, pair.Key.Guid, pair.Key.Name) with { Quantity = pair.Value, Group = group, Source = "observed_snapshot" });
+                yield return true;
             }
             // Import only at tracking start. Newly acquired venues may already
             // have live events; importing their receipts again would double count.
