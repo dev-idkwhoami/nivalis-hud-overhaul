@@ -19,7 +19,8 @@ internal static class QuestPatchRegistration
     private static readonly HashSet<Type> QuestPatches = new()
     {
         typeof(QuestManagerLifecyclePatch), typeof(QuestSaveLifecyclePatch),
-        typeof(PinnedHudQuestsPatch), typeof(PinnedCompassQuestsPatch), typeof(CompassRegistryPatch)
+        typeof(PinnedHudQuestsPatch), typeof(PinnedCompassQuestsPatch), typeof(CompassRegistryPatch),
+        typeof(QuestHudVisibilityPatch)
     };
 
     internal static void Install(Harmony harmony)

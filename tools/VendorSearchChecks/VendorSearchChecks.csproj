@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <GenerateDependencyFile>true</GenerateDependencyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/VendorSearch.cs" Link="VendorSearch.cs" />
+    <Compile Include="../../src/SearchText.cs" Link="SearchText.cs" />
+  </ItemGroup>
+</Project>

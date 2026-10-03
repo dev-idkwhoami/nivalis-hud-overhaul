@@ -25,7 +25,7 @@ if (args.Any(a => a.EndsWith("-startup")))
     var startupComponent = new QuestStartup(IntPtr.Zero);
     startupComponent.Update();
     Check("plugin Load does not make a premature compatibility decision", CompanionSettings.AvailabilityUpdates == 0);
-    var questTypes = new[] { typeof(QuestManagerLifecyclePatch), typeof(QuestSaveLifecyclePatch), typeof(PinnedHudQuestsPatch), typeof(PinnedCompassQuestsPatch), typeof(CompassRegistryPatch) };
+    var questTypes = new[] { typeof(QuestManagerLifecyclePatch), typeof(QuestSaveLifecyclePatch), typeof(PinnedHudQuestsPatch), typeof(PinnedCompassQuestsPatch), typeof(CompassRegistryPatch), typeof(QuestHudVisibilityPatch) };
     Check("non-quest features install immediately", HarmonyLib.Harmony.Installed.ContainsKey(typeof(NonQuestSentinel)));
     Check("no quest patch processor is created during plugin Load", !questTypes.Any(HarmonyLib.Harmony.Processed.Contains));
     var allowed = args.Contains("--allowed-startup");
@@ -47,6 +47,44 @@ if (args.Any(a => a.EndsWith("-startup")))
     Check("startup decision cannot change during gameplay", QuestPatchRegistration.Installed == allowed && CompanionSettings.AvailabilityUpdates == 1 && HarmonyLib.Harmony.Inspections == 2);
     Console.WriteLine($"Passed {checks} deferred registration checks (production installer, recording patcher).");
     return;
+}
+
+var visibilityPath = Path.Combine(Path.GetTempPath(), "hud-visibility-" + Guid.NewGuid() + ".json");
+var restoreVisibility = Callback<Action<ActiveJournalEntriesUi>>(typeof(QuestHudVisibilityPatch), "Started");
+var saveVisibility = Callback<Action<ActiveJournalEntriesUi>>(typeof(QuestHudVisibilityPatch), "Toggled");
+try
+{
+    QuestHudVisibility.Initialize(visibilityPath);
+    var hud = new ActiveJournalEntriesUi();
+    restoreVisibility(hud);
+    Check("first launch retains native visibility without writing a preference", !hud._hidden && hud.Hides == 0 && !File.Exists(visibilityPath));
+    hud.OnToggleQuestHUDDIsplayPreformed();
+    saveVisibility(hud);
+    QuestHudVisibility.Initialize(visibilityPath);
+    var reloadedHud = new ActiveJournalEntriesUi();
+    restoreVisibility(reloadedHud);
+    Check("hidden preference survives restart and restores the native animation", reloadedHud._hidden && reloadedHud.Hides == 1);
+    restoreVisibility(reloadedHud);
+    Check("restoring an unchanged preference does not restart animation", reloadedHud.Hides == 1);
+    reloadedHud.OnToggleQuestHUDDIsplayPreformed();
+    saveVisibility(reloadedHud);
+    QuestHudVisibility.Initialize(visibilityPath);
+    var hiddenHud = new ActiveJournalEntriesUi { _hidden = true };
+    restoreVisibility(hiddenHud);
+    Check("visible preference survives restart too", !hiddenHud._hidden && hiddenHud.Shows == 1);
+    File.WriteAllText(visibilityPath, "invalid");
+    try { QuestHudVisibility.Initialize(visibilityPath); }
+    catch (System.Text.Json.JsonException) { }
+    var unchangedHud = new ActiveJournalEntriesUi { _hidden = true };
+    restoreVisibility(unchangedHud);
+    Check("invalid preference retains native state", unchangedHud._hidden && unchangedHud.Shows == 0);
+    saveVisibility(unchangedHud);
+    Check("next player toggle can replace an invalid preference", File.ReadAllText(visibilityPath) == "true");
+}
+finally
+{
+    File.Delete(visibilityPath);
+    File.Delete(visibilityPath + ".tmp");
 }
 
 var startup = new QuestStartupGate();

@@ -94,10 +94,11 @@ public sealed class FarmScreen : MonoBehaviour
     private string? _identity;
     private float _interactionCheck;
     private string? _displayedId;
+    private readonly FarmScreenMaterials _materials = new();
     public FarmScreen(IntPtr pointer) : base(pointer) { }
     public void OnEnable() => Active.Add(this);
     public void OnDisable() => Active.Remove(this);
-    public void OnDestroy() => Active.Remove(this);
+    public void OnDestroy() { Active.Remove(this); _materials.Detach(); }
     [HideFromIl2Cpp]
     internal bool Hit(Ray ray, float maximum, out float distance)
     {
@@ -118,6 +119,7 @@ public sealed class FarmScreen : MonoBehaviour
     internal void Bind(GreenhouseModuleView module, MeshRenderer display, float aspect)
     {
         Module = module; Display = display; Aspect = aspect;
+        _materials.Bind(module.GetComponent<HoldableEntity>(), gameObject);
         Refresh();
     }
     [HideFromIl2Cpp]
@@ -132,7 +134,7 @@ public sealed class FarmScreen : MonoBehaviour
         if (Module == null || Module.MyGhost?.ModuleType == null) return;
         _identity = TargetKey(Module);
         var item = FarmScreenApi.GetDisplayedProduce(Module);
-        Display.sharedMaterial = FarmScreenPicture.Get(item?.Icon, Aspect);
+        _materials.SetDisplay(Display, FarmScreenPicture.Get(item?.Icon, Aspect));
         _displayedId = item?.Guid;
     }
     public void Update()

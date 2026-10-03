@@ -112,7 +112,9 @@ public sealed class CombinedIngredients : MonoBehaviour
             _panel = _view.AddComponent<UIPanel>();
             _panel.requiresMouse = _panel.pauseTimeWhenOpen = _panel.pauseTimeCompletely = true;
             _panel._startVisible = false;
-            _panel.closeWithCancel = _panel.closeWithPause = true;
+            _panel.closeWithCancel = true;
+            // Native Pause includes O; keep Escape/controller Back via Cancel.
+            _panel.closeWithPause = false;
             _panel.OnHideEvent += (Il2CppSystem.Action)(() => { _showing = false; _showFrame = -1; });
             var close = section.Find("P_Element_CloseBtn/CloseBtn").GetComponent<Button>();
             close.onClick = new Button.ButtonClickedEvent();

@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/QuestTracking.cs" Link="QuestTracking.cs" />
+    <Compile Include="../../src/QuestHudVisibility.cs" Link="QuestHudVisibility.cs" />
     <Compile Include="../../src/QuestPinFilter.cs" Link="QuestPinFilter.cs" />
     <Compile Include="../../src/CompassQuestView.cs" Link="CompassQuestView.cs" />
     <Compile Include="../../src/QuestStartupGate.cs" Link="QuestStartupGate.cs" />

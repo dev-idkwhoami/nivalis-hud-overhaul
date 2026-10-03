@@ -22,6 +22,7 @@ public sealed partial class Plugin : BasePlugin
     {
         Logger = Log;
         ModStorage.Initialize(Paths.ConfigPath);
+        Guard("Load quest HUD visibility", () => QuestHudVisibility.Initialize(ModStorage.FilePath("HUDOverhaul.quest-hud.json")));
         Labels.Load(ModStorage.FilePath(Labels.FileName), message => Log.LogWarning(message));
         CompanionSettings.Register();
         ClassInjector.RegisterTypeInIl2Cpp<CombinedIngredients>();

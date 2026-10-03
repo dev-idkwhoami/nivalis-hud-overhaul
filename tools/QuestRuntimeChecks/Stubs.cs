@@ -105,6 +105,12 @@ namespace Nivalis.UI
     }
     public sealed class ActiveJournalEntriesUi
     {
+        public bool _hidden;
+        public int Hides, Shows;
+        public void Start() { }
+        public void OnToggleQuestHUDDIsplayPreformed() { _hidden = !_hidden; }
+        public void HideAnimated() => Hides++;
+        public void ShowAnimated() => Shows++;
         public UiList questList = new(), venueQuestList = new();
         public object entryParent = new();
         public void Refresh() { }

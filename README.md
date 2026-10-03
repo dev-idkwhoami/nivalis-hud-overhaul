@@ -108,7 +108,37 @@ game is closed, or use HUD Overhaul's Developer category in Mod Companion, for d
 errors remain enabled otherwise. Diagnostics use BepInEx's shared `LogOutput.log`;
 `HUDOverhaul.history.log` is saved gameplay history, independent of verbosity.
 
+## Farming screen placement appearance
+
+Attached farming screens participate in the module's native material override
+when it is moved, and return to their normal appearance when the override ends.
+The screen's latest produce image is kept in the native restoration cache, so
+automatic label updates cannot replace the placement appearance mid-move.
+This uses the existing Farming Screens feature and adds no polling or colliders.
+
+## Known Vendors search
+
+With expanded search enabled, the Known Vendors search matches vendor names or
+the names of items they sell, including temporarily sold-out items. Matching is
+case-insensitive and accepts part of a name. Location and vendor-type filters
+still apply; undiscovered vendors are not added. Stock is read only when filtering,
+with no background scan or persistent inventory cache.
+
+`make test-vendor-search` runs the search callbacks against managed fixtures,
+including combined filters, disabled search, sold-out items and failure cleanup.
+The game UI and IL2CPP hooks still need an in-game check.
+
 ## Quest mod compatibility
+
+The native quest HUD visibility toggle is remembered across game restarts and
+HUD recreation. The preference is shared across saves and stored in
+`BepInEx/config/HUDOverhaul/HUDOverhaul.quest-hud.json`. Only the player's toggle
+is saved; temporary hiding by other UI does not change it. Persistence is
+independent of pinned-quest filtering, but yields with the entire quest module
+when another quest mod is detected. No preference file is created until a toggle.
+
+Combined Ingredients closes with Escape/controller Back or its close button.
+The native Pause action (including O) no longer closes this window.
 
 Quest hooks are deferred until BepInEx reports that all plugins have loaded,
 and registered on the next Unity update, after startup event handlers return.
