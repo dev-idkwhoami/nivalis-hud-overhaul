@@ -4,21 +4,6 @@ internal static class HistoryChecks
 {
     internal static void Run(Action<string,bool> check)
     {
-        var changes=new HistoryAdjustments();
-        HistoryEvent Step(int before,int after)=>new() { Kind="meal_price_step",Venue="v",Subject="dish",Before=before,After=after,Seconds=100,Day=1 };
-        var first=changes.Change(Step(20,25),1).Single();
-        var second=changes.Change(Step(25,30),1.2).Single();
-        check("raw clicks share a group without losing intermediate prices",first.After==25 && second.Before==25 && first.Group==second.Group);
-        check("quiet interval does not flush prematurely",!changes.Flush(2.9).Any());
-        var summary=changes.Flush(3.2).Single();
-        check("paused game still coalesces by real time",summary.Before==20 && summary.After==30 && summary.Quantity==2 && summary.Kind=="meal_price_adjustment");
-        changes.Change(Step(30,35),4).ToArray(); changes.Change(Step(35,30),4.1).ToArray();
-        summary=changes.Flush(4.1,true).Single();
-        check("round trips retain raw steps and net-zero summary",summary.Before==30 && summary.After==30 && summary.Quantity==2);
-        changes.Change(Step(30,35),5).ToArray();
-        var gap=changes.Change(Step(35,40),8).ToArray();
-        check("separate adjustments split after idle gap",gap.Length==2 && gap[0].Kind=="meal_price_adjustment" && gap[0].Group!=gap[1].Group);
-        changes.Clear(); check("loading a save discards pending future adjustments",!changes.Flush(100,true).Any());
         var dir=Path.Combine(Path.GetTempPath(),"hud-history-"+Guid.NewGuid()); Directory.CreateDirectory(dir);
         var path=Path.Combine(dir,"history.log");
         HistoryEvent Sale(long qty,string venue="v",int day=1)=>new() { Kind="meal_sale",Venue=venue,Subject="dish",Quantity=qty,Money=qty*20,Day=day };
@@ -47,7 +32,19 @@ internal static class HistoryChecks
             {
                 db.Fork("D"); var payroll=db.Read("staff_payment").Single();
                 check("history survives connection reopen with names and precision",payroll.Name=="O'Brien 🧑" && payroll.Money==-50 && payroll.Source=="legacy_daily_import");
+                db.Append(new[] { payroll with { Quantity = 1, Money = -30, Day = 2, Source = "live" } });
+                db.Checkpoint("payroll-only", "slotD");
+                db.Fork("D");
+                check("older save restores only its staff payments", db.Read("staff_payment").Sum(e => e.Money) == -50);
+                db.Fork("payroll-only");
+                var payments = db.Read("staff_payment");
+                check("payroll-only recording extends a mixed legacy log", payments.Count == 2 && payments.Sum(e => e.Money) == -80);
+                var ledger = new PayrollLedger();
+                foreach (var e in payments)
+                    if (e.Subject.Length != 0) ledger.Add(e.Venue, e.Subject, e.Name, e.Day, checked((int)e.Quantity), e.Money);
+                check("restored employee breakdown retains both payment days", ledger.Payments.Count == 2 && ledger.Payments.Sum(p => p.Amount) == -80);
                 db.Fork("new-game"); check("new playthrough does not inherit matching game dates",db.Read("meal_sale").Count==0);
+                check("new playthrough does not inherit payroll", db.Read("staff_payment").Count == 0);
             }
             Exception? failure=null;
             using(var worker=new HistoryWorker(path,e=>failure=e))

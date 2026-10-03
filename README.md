@@ -130,12 +130,12 @@ The game UI and IL2CPP hooks still need an in-game check.
 
 ## Quest mod compatibility
 
-The native quest HUD visibility toggle is remembered across game restarts and
-HUD recreation. The preference is shared across saves and stored in
-`BepInEx/config/HUDOverhaul/HUDOverhaul.quest-hud.json`. Only the player's toggle
-is saved; temporary hiding by other UI does not change it. Persistence is
-independent of pinned-quest filtering, but yields with the entire quest module
-when another quest mod is detected. No preference file is created until a toggle.
+The **Show quest HUD** toggle in Mod Companion's Features category and the
+native hold-J action control the same setting: `[Features] QuestHudVisible` in
+`BepInEx/config/HUDOverhaul/HUDOverhaul.cfg`. Changes apply immediately and persist
+across restarts and saves. Temporary hiding by other UI does not change it.
+The earlier JSON preference is no longer used. This setting is independent of pinned-quest
+filtering, but is disabled when the quest module yields to a conflicting mod.
 
 Combined Ingredients closes with Escape/controller Back or its close button.
 The native Pause action (including O) no longer closes this window.
@@ -188,13 +188,14 @@ on unchanged frames. Marker registration/removal during a draw is routed to the
 original registry so those changes survive restoration. With the feature off or
 no active pins, the compass uses its original list without substitution.
 
-History reconciliation is scheduled every five seconds without overlapping
-scans, and advances by at most eight
-steps per frame, stopping between steps after 0.5 ms. Menu and staff entries are
-individual steps. Each inventory snapshot remains one indivisible step to avoid
-mixing stock from different frames; that step can exceed the time budget. Load
-baselines and receipt imports remain synchronous, and file writes use the worker.
-Pending scans are canceled when gameplay unloads or another save is loaded.
+Only staff payments are recorded in the custom history log. The unused sale,
+purchase, price/wage-change, venue-baseline and inventory collectors have been
+removed, along with the recurring reconciliation scan and frame-spreading code.
+Payroll capture, save branches, load restoration and the one-time staff receipt
+import remain intact. Buffered payroll writes still run on the existing worker;
+the lightweight pump flushes pending records every two seconds or at 256 records,
+and on save/quit. It does not scan menus, staff rosters or inventories.
+Existing log files remain readable and are not rewritten to remove older events.
 
 The bundled Mod Companion adds its settings entry when the native settings panel
 opens, without repeatedly searching loaded objects during gameplay.

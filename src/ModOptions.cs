@@ -10,6 +10,7 @@ internal static class ModOptions
     internal static Setting<bool> Search = null!, Sorting = null!, QuickActions = null!, Staff = null!, Quests = null!,
         Scan = null!, Conditions = null!, ReviewTime = null!, FastReviews = null!, Sales = null!, Ingredients = null!, Screens = null!;
     internal static Setting<bool> VerboseLogging = null!;
+    internal static Setting<bool> QuestHudVisible = null!;
     internal static Setting<bool> DeductVenueStock = null!;
     internal static Setting<int> StockDays = null!, DebounceMs = null!;
     internal static void Initialize(SettingsCategory features, SettingsCategory shopping, SettingsCategory farm, DeveloperSection developer)
@@ -18,6 +19,8 @@ internal static class ModOptions
         Search = Feature("Search", "search"); Sorting = Feature("Sorting", "sorting");
         QuickActions = Feature("QuickActions", "quickActions"); Staff = Feature("StaffOrdering", "staff");
         Quests = Feature("PinnedQuests", "quests"); Scan = Feature("ScanColors", "scan");
+        QuestHudVisible = Feature("QuestHudVisible", "questHudVisible");
+        QuestHudVisible.Changed += _ => Plugin.Guard("Apply quest HUD visibility", QuestHudVisibility.ApplySetting);
         Conditions = Feature("ConditionOrder", "conditions"); ReviewTime = Feature("ReviewTimestamps", "reviewTime");
         FastReviews = Feature("FastReviews", "fastReviews"); Sales = Feature("SalesStatistics", "sales");
         Ingredients = Feature("CombinedIngredients", "ingredients");

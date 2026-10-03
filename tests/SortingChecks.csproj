@@ -9,7 +9,6 @@
     <Compile Include="../src/ModStorage.cs" Link="ModStorage.cs" />
     <Compile Include="../src/FarmTargets.cs" Link="FarmTargets.cs" />
     <Compile Include="../src/HistoryEvent.cs" Link="HistoryEvent.cs" />
-    <Compile Include="../src/FrameWork.cs" Link="FrameWork.cs" />
     <Compile Include="../src/HistoryStore.cs" Link="HistoryStore.cs" />
     <Compile Include="../src/HistoryWorker.cs" Link="HistoryWorker.cs" />
     <Compile Include="../src/PayrollLedger.cs" Link="PayrollLedger.cs" />

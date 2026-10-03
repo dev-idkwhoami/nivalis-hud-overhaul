@@ -315,7 +315,7 @@ Console.WriteLine($"Passed {checks} total checks including ingredient counts and
 
 HistoryChecks.Run(Geometry);
 PerformanceChecks.Run(Geometry);
-Console.WriteLine($"Passed {checks} total checks including file history, save branches and adjustment grouping.");
+Console.WriteLine($"Passed {checks} total checks including payroll history and save branches.");
 
 var farmPath = Path.Combine(Path.GetTempPath(), "hud-farm-targets-" + Guid.NewGuid());
 try

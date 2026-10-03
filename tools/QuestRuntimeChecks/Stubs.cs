@@ -21,6 +21,11 @@ namespace Il2CppSystem.Collections.Generic
 }
 namespace UnityEngine
 {
+    public static class Object
+    {
+        public static object[] Instances = Array.Empty<object>();
+        public static T[] FindObjectsOfType<T>() => Instances.OfType<T>().ToArray();
+    }
     public class MonoBehaviour(IntPtr pointer) { public IntPtr Pointer { get; } = pointer; public bool enabled = true; }
     public class GameObject
     {
@@ -120,8 +125,18 @@ namespace NivalisMods.HudOverhaul
 {
     internal static class ModOptions
     {
-        internal sealed class Toggle { internal bool Value = true; }
+        internal sealed class Toggle
+        {
+            private bool _value = true;
+            internal event Action<bool>? Changed;
+            internal bool Value
+            {
+                get => _value;
+                set { if (_value == value) return; _value = value; Changed?.Invoke(value); }
+            }
+        }
         internal static readonly Toggle Quests = new();
+        internal static readonly Toggle QuestHudVisible = new();
     }
     public sealed partial class Plugin
     {

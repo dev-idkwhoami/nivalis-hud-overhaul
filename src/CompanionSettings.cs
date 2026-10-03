@@ -30,5 +30,7 @@ internal static class CompanionSettings
     {
         ModOptions.Quests.EnabledWhen = () => QuestPatchRegistration.Installed;
         ModOptions.Quests.DisabledReason = QuestPatchRegistration.UnavailableText;
+        ModOptions.QuestHudVisible.EnabledWhen = () => QuestPatchRegistration.Installed;
+        ModOptions.QuestHudVisible.DisabledReason = QuestPatchRegistration.UnavailableText;
     }
 }

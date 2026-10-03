@@ -45,47 +45,45 @@ if (args.Any(a => a.EndsWith("-startup")))
     Check("startup component stops after the one decision", !startupComponent.enabled && CompanionSettings.AvailabilityUpdates == 1);
     chain.Plugins.Clear(); chain.Finish(); startupComponent.Update();
     Check("startup decision cannot change during gameplay", QuestPatchRegistration.Installed == allowed && CompanionSettings.AvailabilityUpdates == 1 && HarmonyLib.Harmony.Inspections == 2);
+    var liveHud = new ActiveJournalEntriesUi();
+    UnityEngine.Object.Instances = new object[] { liveHud };
+    ModOptions.QuestHudVisible.Changed += _ => QuestHudVisibility.ApplySetting();
+    ModOptions.QuestHudVisible.Value = false;
+    Check("menu visibility changes apply only when quest module is available", liveHud._hidden == allowed && liveHud.Hides == (allowed ? 1 : 0));
+    if (allowed)
+    {
+        liveHud.OnToggleQuestHUDDIsplayPreformed();
+        QuestHudVisibility.Remember(liveHud);
+        Check("native toggle updates menu without triggering another animation", ModOptions.QuestHudVisible.Value && !liveHud._hidden && liveHud.Shows == 0);
+        ModOptions.QuestHudVisible.Value = false;
+        ModOptions.QuestHudVisible.Value = true;
+        Check("menu toggle works in both directions", !liveHud._hidden && liveHud.Shows == 1);
+    }
     Console.WriteLine($"Passed {checks} deferred registration checks (production installer, recording patcher).");
     return;
 }
 
-var visibilityPath = Path.Combine(Path.GetTempPath(), "hud-visibility-" + Guid.NewGuid() + ".json");
 var restoreVisibility = Callback<Action<ActiveJournalEntriesUi>>(typeof(QuestHudVisibilityPatch), "Started");
 var saveVisibility = Callback<Action<ActiveJournalEntriesUi>>(typeof(QuestHudVisibilityPatch), "Toggled");
-try
-{
-    QuestHudVisibility.Initialize(visibilityPath);
-    var hud = new ActiveJournalEntriesUi();
-    restoreVisibility(hud);
-    Check("first launch retains native visibility without writing a preference", !hud._hidden && hud.Hides == 0 && !File.Exists(visibilityPath));
-    hud.OnToggleQuestHUDDIsplayPreformed();
-    saveVisibility(hud);
-    QuestHudVisibility.Initialize(visibilityPath);
-    var reloadedHud = new ActiveJournalEntriesUi();
-    restoreVisibility(reloadedHud);
-    Check("hidden preference survives restart and restores the native animation", reloadedHud._hidden && reloadedHud.Hides == 1);
-    restoreVisibility(reloadedHud);
-    Check("restoring an unchanged preference does not restart animation", reloadedHud.Hides == 1);
-    reloadedHud.OnToggleQuestHUDDIsplayPreformed();
-    saveVisibility(reloadedHud);
-    QuestHudVisibility.Initialize(visibilityPath);
-    var hiddenHud = new ActiveJournalEntriesUi { _hidden = true };
-    restoreVisibility(hiddenHud);
-    Check("visible preference survives restart too", !hiddenHud._hidden && hiddenHud.Shows == 1);
-    File.WriteAllText(visibilityPath, "invalid");
-    try { QuestHudVisibility.Initialize(visibilityPath); }
-    catch (System.Text.Json.JsonException) { }
-    var unchangedHud = new ActiveJournalEntriesUi { _hidden = true };
-    restoreVisibility(unchangedHud);
-    Check("invalid preference retains native state", unchangedHud._hidden && unchangedHud.Shows == 0);
-    saveVisibility(unchangedHud);
-    Check("next player toggle can replace an invalid preference", File.ReadAllText(visibilityPath) == "true");
-}
-finally
-{
-    File.Delete(visibilityPath);
-    File.Delete(visibilityPath + ".tmp");
-}
+var hud = new ActiveJournalEntriesUi();
+restoreVisibility(hud);
+Check("default setting shows quest HUD", !hud._hidden && hud.Hides == 0);
+hud.OnToggleQuestHUDDIsplayPreformed();
+saveVisibility(hud);
+Check("native toggle updates companion setting", !ModOptions.QuestHudVisible.Value);
+var reloadedHud = new ActiveJournalEntriesUi();
+restoreVisibility(reloadedHud);
+Check("HUD recreation restores configured visibility", reloadedHud._hidden && reloadedHud.Hides == 1);
+restoreVisibility(reloadedHud);
+Check("unchanged preference does not restart animation", reloadedHud.Hides == 1);
+ModOptions.QuestHudVisible.Value = true;
+restoreVisibility(reloadedHud);
+Check("menu setting restores visibility", !reloadedHud._hidden && reloadedHud.Shows == 1);
+reloadedHud.OnToggleQuestHUDDIsplayPreformed();
+saveVisibility(reloadedHud);
+reloadedHud.OnToggleQuestHUDDIsplayPreformed();
+saveVisibility(reloadedHud);
+Check("native toggle can reenable configured visibility", ModOptions.QuestHudVisible.Value);
 
 var startup = new QuestStartupGate();
 for (var i = 0; i < 100; i++) Check("no registration before all plugins load", !startup.TryBegin());

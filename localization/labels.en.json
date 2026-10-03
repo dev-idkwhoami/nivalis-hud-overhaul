@@ -79,6 +79,7 @@
   "settings.option.quickActions": "Quick Actions wheel",
   "settings.option.staff": "Staff ordering controls",
   "settings.option.quests": "Only show pinned quests when any are pinned",
+  "settings.option.questHudVisible": "Show quest HUD",
   "settings.quests.unavailable": "Unavailable: {mods} is installed.",
   "settings.quests.unavailableMultiple": "Unavailable: {mods} are installed.",
   "settings.quests.unavailableOther": "Unavailable: another mod controls quest filtering, or compatibility could not be verified.",
