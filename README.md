@@ -8,7 +8,7 @@ installing development builds, and packaging releases.
 - .NET SDK 8 (the mod targets .NET 6; the checks target .NET 8).
 - GNU Make, Bash, and standard Unix utilities (including sed).
 - The game with BepInEx 6 IL2CPP and generated interop assemblies.
-- Mod Companion 1.0.2, included in the archive.
+- Mod Companion 1.0.3 or newer; version 1.0.3 is included in the archive.
 
 Launch the game with BepInEx once before building. The build reads references
 from `BepInEx/core/` and `BepInEx/interop/` in that installation. The first build
@@ -242,7 +242,7 @@ Licensed under the [MIT License](LICENSE).
 
 ## Mod Companion settings
 
-Mod Companion 1.0.2 is required and included. F5 and the native settings entry open
+Mod Companion 1.0.3 or newer is required; 1.0.3 is included. F5 and the native settings entry open
 its shared menu; HUD Overhaul no longer provides a standalone settings window.
 Choose HUD Overhaul's icon in the top row. Features, Shopping and Farm are custom
 tabs; Controls, Developer and Info use Companion's dedicated section APIs. Controls

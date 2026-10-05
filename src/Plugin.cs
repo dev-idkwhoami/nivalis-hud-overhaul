@@ -11,10 +11,10 @@ using Nivalis.GhostSystem.CustomerLoop;
 namespace NivalisMods.HudOverhaul;
 
 [BepInPlugin(Id, "HUD Overhaul", Version)]
-[BepInDependency(SettingsRegistry.PluginId, SettingsRegistry.PluginVersion)]
+[BepInDependency(SettingsRegistry.PluginId, ">=1.0.3")]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.1";
+    public const string Version = "1.1.2";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
