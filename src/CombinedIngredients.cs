@@ -11,12 +11,16 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
+using ScrollRectList = Il2CppSystem.Collections.Generic.List<UnityEngine.UI.ScrollRect>;
 
 namespace NivalisMods.HudOverhaul;
 
 public sealed class CombinedIngredients : MonoBehaviour
 {
+    private static CombinedIngredients? _active;
     private MenuModificationWindow _window = null!;
+    private UIWindow _scrollOwner = null!;
+    private readonly ScrollRectList _wheelScrolls = new();
     private GameObject? _view;
     private UIPanel? _panel;
     private int _showFrame = -1;
@@ -32,6 +36,7 @@ public sealed class CombinedIngredients : MonoBehaviour
     {
         if (_view != null) { Return(); _button.gameObject.SetActive(ModOptions.Ingredients.Value); return; }
         _window = window;
+        _scrollOwner = window.GetComponentInParent<UIWindow>();
         var main = window.transform.Find("MainPanel");
 
         var source = main.Find("TopInfoPanel/P_StatisticsButton").GetComponent<Button>();
@@ -75,6 +80,7 @@ public sealed class CombinedIngredients : MonoBehaviour
             var list = scrollObject.GetComponent<ItemListUI>();
             if (list != null) Object.DestroyImmediate(list);
             _scroll = scrollObject.GetComponent<ScrollRect>();
+            _wheelScrolls.Add(_scroll);
             _scroll.onValueChanged = new ScrollRect.ScrollRectEvent();
             // Restore the copied list even when Statistics was hidden at clone
             // time; otherwise all new rows retain the same default position.
@@ -115,7 +121,7 @@ public sealed class CombinedIngredients : MonoBehaviour
             _panel.closeWithCancel = true;
             // Native Pause includes O; keep Escape/controller Back via Cancel.
             _panel.closeWithPause = false;
-            _panel.OnHideEvent += (Il2CppSystem.Action)(() => { _showing = false; _showFrame = -1; });
+            _panel.OnHideEvent += (Il2CppSystem.Action)EndShow;
             var close = section.Find("P_Element_CloseBtn/CloseBtn").GetComponent<Button>();
             close.onClick = new Button.ButtonClickedEvent();
             close.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(new Action(Return)));
@@ -197,6 +203,7 @@ public sealed class CombinedIngredients : MonoBehaviour
     private void Show()
     {
         _showing = true;
+        _active = this;
         _view!.transform.SetAsLastSibling();
         Refresh();
         // Let a newly created native UIPanel complete Start before Show.
@@ -211,12 +218,45 @@ public sealed class CombinedIngredients : MonoBehaviour
     [HideFromIl2Cpp]
     private void Return()
     {
-        _showFrame = -1; _showing = false;
+        EndShow();
         if (_panel != null && _panel.IsVisible) _panel.Hide();
     }
-    public void OnDisable() => Return();
-    public void OnDestroy() { if (_view != null) Object.Destroy(_view); }
+    [HideFromIl2Cpp]
+    private void EndShow()
+    {
+        _showFrame = -1; _showing = false;
+        if (ReferenceEquals(_active, this)) _active = null;
+    }
 
+    [HideFromIl2Cpp]
+    internal static ScrollRectList? WheelScrolls(IScrollRectsProvider provider)
+    {
+        var active = _active;
+        if (active == null || !active._showing || active._panel == null || !active._panel.IsVisible ||
+            active._scrollOwner == null || provider == null || provider.Pointer != active._scrollOwner.Pointer)
+            return null;
+        return active._wheelScrolls;
+    }
+
+    public void OnDisable() => Return();
+    public void OnDestroy() { EndShow(); if (_view != null) Object.Destroy(_view); }
+
+}
+
+[HarmonyPatch(typeof(UIScrollViewHandler), nameof(UIScrollViewHandler.GetScrollRects))]
+internal static class CombinedIngredientsWheelPatch
+{
+    [HarmonyPrefix]
+    private static bool Prefix(IScrollRectsProvider __0, ref ScrollRectList __result)
+    {
+        // Native wheel input uses the venue window's cached scroll list, not
+        // pointer events. Our separate UIPanel is absent from that list. Route
+        // this window to the overlay without changing the native cache.
+        var scrolls = CombinedIngredients.WheelScrolls(__0);
+        if (scrolls == null) return true;
+        __result = scrolls;
+        return false;
+    }
 }
 
 [HarmonyPatch(typeof(MenuModificationWindow), nameof(MenuModificationWindow.Initialize))]
