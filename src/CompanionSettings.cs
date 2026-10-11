@@ -25,12 +25,4 @@ internal static class CompanionSettings
         mod.Info.AddHeading("Farm editor shortcuts");
         mod.Info.AddParagraph(Labels.Get("settings.editorShortcuts.body"));
     }
-
-    internal static void SetQuestAvailability()
-    {
-        ModOptions.Quests.EnabledWhen = () => QuestPatchRegistration.Installed;
-        ModOptions.Quests.DisabledReason = QuestPatchRegistration.UnavailableText;
-        ModOptions.QuestHudVisible.EnabledWhen = () => QuestPatchRegistration.Installed;
-        ModOptions.QuestHudVisible.DisabledReason = QuestPatchRegistration.UnavailableText;
-    }
 }

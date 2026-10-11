@@ -161,7 +161,7 @@ public sealed class ShoppingVenues : MonoBehaviour
         {
             if (_selected != null && venue != _selected) continue;
             var demand = Demand(venue, ui.ItemType);
-            if (demand != null && demand.MissingItems > 0) demands.Add((venue, demand));
+            if (demand is { MissingItems: > 0 } value) demands.Add((venue, value));
         }
         if (EstimatedShopping.Items != null &&
             EstimatedShopping.Items.TryGetValue(ui.ItemType, out var total))
@@ -221,7 +221,7 @@ public sealed class ShoppingVenues : MonoBehaviour
             var ui = display.GameObject.GetComponent<ShoppingListItemDisplayUI>();
             if (ui == null) { kept.Add(display); continue; }
             var selectedDemand = _selected == null ? null : Demand(_selected, ui.ItemType);
-            if (_selected != null && (selectedDemand == null || selectedDemand.MissingItems <= 0))
+            if (_selected != null && (selectedDemand == null || selectedDemand.Value.MissingItems <= 0))
             {
                 ui.ForceTurnOff();
                 hidden.Add(display);

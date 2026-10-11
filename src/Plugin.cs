@@ -14,7 +14,7 @@ namespace NivalisMods.HudOverhaul;
 [BepInDependency(SettingsRegistry.PluginId, ">=1.0.3")]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.2";
+    public const string Version = "1.1.3";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
@@ -26,7 +26,6 @@ public sealed partial class Plugin : BasePlugin
         CompanionSettings.Register();
         ClassInjector.RegisterTypeInIl2Cpp<CombinedIngredients>();
         ClassInjector.RegisterTypeInIl2Cpp<HistoryPump>();
-        ClassInjector.RegisterTypeInIl2Cpp<QuestStartup>();
         ClassInjector.RegisterTypeInIl2Cpp<FarmScreenEditor>();
         ClassInjector.RegisterTypeInIl2Cpp<FarmScreens>();
         ClassInjector.RegisterTypeInIl2Cpp<FarmScreenHost>();
@@ -44,8 +43,7 @@ public sealed partial class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<VirtualReviews>();
         ClassInjector.RegisterTypeInIl2Cpp<ShoppingVenues>();
         var harmony = new Harmony(Id);
-        QuestPatchRegistration.Install(harmony);
-        CompanionSettings.SetQuestAvailability();
+        harmony.PatchAll(typeof(Plugin).Assembly);
         ExpandedSearch.Install();
         QuickActionsPreview.Initialize();
         QuickActionBindings.Initialize();
@@ -53,7 +51,6 @@ public sealed partial class Plugin : BasePlugin
         Payroll.Initialize();
         Guard("Initialize history", GameHistory.Initialize);
         AddComponent<HistoryPump>();
-        AddComponent<QuestStartup>();
         AddComponent<FarmScreenEditor>();
         AddComponent<FarmScreens>();
         // Own the input listener through BepInEx, independently of scene UI startup.

@@ -157,44 +157,6 @@ try
 finally { if (Directory.Exists(staffFolder)) Directory.Delete(staffFolder, true); }
 Console.WriteLine($"Passed {checks} total checks including staff order persistence and roster changes.");
 
-// Exercise the same selection across HUD rows and compass destinations, including
-// shared destinations, save reloads and the last pinned quest leaving the roster.
-var questStates = new[] {
-    new QuestPinState(11, true, false), new QuestPinState(22, true, false),
-    new QuestPinState(33, true, false), new QuestPinState(44, false, true)
-};
-var markers = new[] { (Quest: 0L, Place: "shop"), (Quest: 11L, Place: "shared"),
-    (Quest: 22L, Place: "shared"), (Quest: 33L, Place: "station") };
-var originalMarkers = markers.ToArray();
-var pins = new QuestPinFilter(questStates);
-Geometry("no active pins preserve native quest and compass candidates", !pins.HasPins && markers.All(m => pins.ShowCompassMarker(m.Quest)) && questStates.All(q => pins.ShowQuest(q.QuestId)));
-questStates[0] = questStates[0] with { Pinned = true };
-pins = new QuestPinFilter(questStates);
-Geometry("one pin excludes other HUD quests and synthetic reminders", pins.HasPins && pins.ShowQuest(11) && !pins.ShowQuest(22) && !pins.ShowQuest(0));
-Geometry("ordinary compass destinations stay visible with pins", pins.ShowCompassMarker(0));
-var destinations = markers.Where(m => pins.ShowCompassMarker(m.Quest)).GroupBy(m => m.Place).ToDictionary(g => g.Key, g => g.Select(m => m.Quest).ToArray());
-Geometry("shared compass destination loses only unpinned quest numbers", destinations["shared"].SequenceEqual([11L]) && destinations.ContainsKey("shop") && !destinations.ContainsKey("station"));
-Geometry("filtering never edits registered marker source", markers.SequenceEqual(originalMarkers));
-questStates[2] = questStates[2] with { Pinned = true };
-pins = new QuestPinFilter(questStates);
-Geometry("multiple pins appear together", questStates.Where(q => pins.ShowQuest(q.QuestId)).Select(q => q.QuestId).SequenceEqual([11L, 33L]));
-questStates[0] = questStates[0] with { Pinned = false };
-pins = new QuestPinFilter(questStates);
-Geometry("unpin one keeps filtering to remaining pin", !pins.ShowQuest(11) && pins.ShowQuest(33) && pins.HasPins);
-questStates[2] = questStates[2] with { Pinned = false };
-pins = new QuestPinFilter(questStates);
-Geometry("unpin last restores all candidates", !pins.HasPins && markers.All(m => pins.ShowCompassMarker(m.Quest)));
-questStates[2] = questStates[2] with { Pinned = true };
-pins = new QuestPinFilter(questStates);
-Geometry("loading native saved pins restores selection", pins.HasPins && pins.ShowQuest(33) && !pins.ShowQuest(11));
-questStates[2] = questStates[2] with { Active = false };
-pins = new QuestPinFilter(questStates);
-Geometry("completed or failed last pin restores normal display", !pins.HasPins && pins.ShowQuest(11));
-pins = new QuestPinFilter(Array.Empty<QuestPinState>());
-Geometry("empty or newly loaded quest roster cannot retain previous pins", !pins.HasPins && pins.ShowCompassMarker(22));
-Console.WriteLine($"Passed {checks} total checks including quest pin transitions and shared compass destinations.");
-
-
 // Slot preferences must survive reload without replacing occupied slots or
 // silently overwriting malformed files with an empty layout.
 var slotsFolder = Path.Combine(Path.GetTempPath(), "hud-quick-slots-" + Guid.NewGuid());
@@ -314,7 +276,6 @@ Geometry("ingredients combine across dishes and compare periods", ingredients.Fi
 Console.WriteLine($"Passed {checks} total checks including ingredient counts and save-bound payroll.");
 
 HistoryChecks.Run(Geometry);
-PerformanceChecks.Run(Geometry);
 Console.WriteLine($"Passed {checks} total checks including payroll history and save branches.");
 
 var farmPath = Path.Combine(Path.GetTempPath(), "hud-farm-targets-" + Guid.NewGuid());

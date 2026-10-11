@@ -128,65 +128,39 @@ with no background scan or persistent inventory cache.
 including combined filters, disabled search, sold-out items and failure cleanup.
 The game UI and IL2CPP hooks still need an in-game check.
 
-## Quest mod compatibility
+## Quest HUD visibility
 
-The **Show quest HUD** toggle in Mod Companion's Features category and the
-native hold-J action control the same setting: `[Features] QuestHudVisible` in
-`BepInEx/config/HUDOverhaul/HUDOverhaul.cfg`. Changes apply immediately and persist
-across restarts and saves. Temporary hiding by other UI does not change it.
-The earlier JSON preference is no longer used. This setting is independent of pinned-quest
-filtering, but is disabled when the quest module yields to a conflicting mod.
+Quest filtering is handled by the game's **Quest Marker Filtering** option in
+Gameplay settings (Update #4 and newer). HUD Overhaul no longer filters quest
+rows or compass markers, subscribes to quest changes, or provides a pinned-quest
+setting. Any old `PinnedQuests` config entry is unused.
+
+The **Show quest HUD** toggle in Mod Companion and the native hold-J action still
+control `[Features] QuestHudVisible` in `BepInEx/config/HUDOverhaul/HUDOverhaul.cfg`.
+Explicit toggles persist across restarts and saves; temporary hiding by menus
+does not change the saved preference. Visibility does not change native filtering.
+Run `make test-quest-hud` for managed visibility and preference checks; native
+animation, input and marker filtering still require an in-game check.
 
 Combined Ingredients closes with Escape/controller Back or its close button.
 The native Pause action (including O) no longer closes this window.
 
-Quest hooks are deferred until BepInEx reports that all plugins have loaded,
-and registered on the next Unity update, after startup event handlers return.
-Compatibility is checked once at that point. Tracked Quests HUD's optional
-load-order dependency is retained, and its presence disables the entire quest
-module. Another Harmony owner on `NavigationUI.LateUpdate` or
-`ActiveJournalEntriesUi.Refresh` also prevents registration. No quest lifecycle,
-HUD, compass, or marker-registry hooks are installed when blocked, and the module
-never subscribes to quest events. Other HUD features install normally during Load.
+## Update #4 compatibility
 
-Your saved quest-filter setting is preserved, but cannot enable a skipped module
-during that session. The menu shows the option disabled with an explanation.
-Restart after changing installed quest mods. There is no runtime compatibility
-polling or support for changing patch ownership after this startup decision.
-Harmony identifies hooks, not what those hooks do; direct native modifications
-outside Harmony are not detected. A failed partial installation rolls back only
-our dedicated quest-module patches.
-
-Run `make test-quest-backoff GAME_PATH="../Nivalis Nights"` for ownership and
-provider-metadata checks against the installed Harmony types. Run
-`make test-quest-runtime` (also included in `make test`) for the production quest
-selection/cache callbacks against managed stand-ins for native game objects,
-and the startup installer against a recording patcher.
-These cover startup gating, notifications, unchanged frames, marker replacement,
-registrations during drawing, exception cleanup, and save/manager replacement.
-They do not replace an in-game IL2CPP detour or coexistence test.
+Updated against regenerated bindings for build 25828494. The removed
+inventory-details screen is no longer patched. Shopping data uses the new value
+type, and Standard shopping with venue stock ignored uses each venue's native
+restocking targets. Estimated shopping retains its seven-day sales history;
+items without sales history fall back to the venue's native target (Lean,
+Normal, Extra or Recent Sales). Both modes resolve customized recipes for the
+owning venue. Standard with stock deduction leaves the native calculation
+untouched; Standard with stock ignored still follows each venue's targets and
+does not scan sales history. Changing Stock Days refreshes an open Estimated list.
+Estimates only change the shopping view, not manager strategies or budgets.
+`make test-shopping` checks native-target fallback, stocked items, shared
+ingredients, carried inventory and restoration of native shopping dictionaries.
 
 ### Background work
-
-Quest selection is invalidated by native pin, progress, quest-start, and
-quest-completion notifications. HUD refreshes also request current state. Save
-clears and manager destruction detach listeners and discard cached state. There
-is no quest-state polling timer. Unchanged pin selections keep the same revision,
-so ordinary progress notifications do not rebuild the compass view unnecessarily.
-
-While the feature is enabled and an active quest is pinned, the compass uses a
-cached secondary marker list. It rebuilds only when the pin selection, manager,
-source list, or native list version changes. The game's quest-assignment setter
-unregisters/re-registers a marker, which changes that version. Direct third-party
-writes to marker fields without those native callbacks are not tracked. Moving
-targets remain live because the view contains the original marker objects.
-
-Native `NavigationUI.LateUpdate` reads the manager's list field directly, with no
-list parameter or filter callback. We therefore select the cached list only for
-that draw and restore the original registry in a finalizer. No list is rebuilt
-on unchanged frames. Marker registration/removal during a draw is routed to the
-original registry so those changes survive restoration. With the feature off or
-no active pins, the compass uses its original list without substitution.
 
 Only staff payments are recorded in the custom history log. The unused sale,
 purchase, price/wage-change, venue-baseline and inventory collectors have been
@@ -199,14 +173,6 @@ Existing log files remain readable and are not rewritten to remove older events.
 
 The bundled Mod Companion adds its settings entry when the native settings panel
 opens, without repeatedly searching loaded objects during gameplay.
-
-To support another known quest mod, edit `src/QuestModCompatibility.cs`: add its
-plugin GUID and display name to `Providers`, and add a matching soft-dependency
-attribute at the top of that same file. Optional Harmony owner IDs can be listed
-on the provider when they differ from its plugin GUID. No changes to patch
-registration or menu code are required. The compatibility checks verify every
-catalog entry has its optional load-order declaration. Unlisted owners are still
-detected through Harmony; matching plugin metadata supplies their display name.
 
 Overlapping Combined Ingredients rows were reproduced by disabling the copied
 list layout. The window now restores its copied layout components so it works

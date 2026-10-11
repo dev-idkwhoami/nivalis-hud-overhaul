@@ -21,13 +21,12 @@ internal static class QuestHudVisibility
 
     internal static void ApplySetting()
     {
-        if (!QuestPatchRegistration.Installed) return;
         foreach (var hud in UnityEngine.Object.FindObjectsOfType<ActiveJournalEntriesUi>()) Restore(hud);
     }
 }
 
 // Save only an explicit native toggle, never temporary hiding by menus or scenes.
-// Both hooks belong to the deferred quest module and yield to conflicting mods.
+// Visibility is independent of the game's native quest-marker filtering.
 [HarmonyPatch(typeof(ActiveJournalEntriesUi))]
 internal static class QuestHudVisibilityPatch
 {

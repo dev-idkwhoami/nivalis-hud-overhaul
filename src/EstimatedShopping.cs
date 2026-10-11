@@ -23,7 +23,7 @@ internal static class EstimatedShopping
     {
         _enabled = shopping.Choice("DemandMode", "Shopping demand", false,
             new[] { new Choice<bool>(false, "Standard"), new Choice<bool>(true, "Estimated") },
-            "Also remembers the selected shopping tab. Estimates use seven completed days of sales.");
+            "Standard follows venue restocking strategies. Estimated uses seven completed days of sales and Stock Days; recipes without sales history use the venue strategy. This changes your shopping list, not manager restocking.");
         _enabled.Changed += _ => { if (!_fallingBack) Plugin.Guard("Refresh shopping demand mode", RefreshPanels); };
     }
 
@@ -91,24 +91,27 @@ internal static class EstimatedShopping
             nativeVenues.TryGetValue(venue, out var native);
             var sales = new Dictionary<string, long>();
             var history = new HashSet<string>();
-            var receipts = runtime.Receipts.ReceiptsLookup.GetReceiptsOfType<RestaurantReceipt>();
-            var receiptCount = receipts.Cast<Il2CppSystem.Collections.Generic.IReadOnlyCollection<RestaurantReceipt>>().Count;
-            for (var r = 0; r < receiptCount; r++)
+            if (Enabled)
             {
-                var receipt = receipts[r];
-                if (receipt.Meal == null) continue;
-                var id = receipt.Meal.Guid;
-                if (receipt.Time.GameplayGameDay < today) history.Add(id);
-                if (DemandEstimate.InHistory(receipt.Time.GameplayGameDay, today))
-                    sales[id] = sales.GetValueOrDefault(id) + receipt.Count;
+                var receipts = runtime.Receipts.ReceiptsLookup.GetReceiptsOfType<RestaurantReceipt>();
+                var receiptCount = receipts.Cast<Il2CppSystem.Collections.Generic.IReadOnlyCollection<RestaurantReceipt>>().Count;
+                for (var r = 0; r < receiptCount; r++)
+                {
+                    var receipt = receipts[r];
+                    if (receipt.Meal == null) continue;
+                    var id = receipt.Meal.Guid;
+                    if (receipt.Time.GameplayGameDay < today) history.Add(id);
+                    if (DemandEstimate.InHistory(receipt.Time.GameplayGameDay, today))
+                        sales[id] = sales.GetValueOrDefault(id) + receipt.Count;
+                }
             }
             var ingredients = new Dictionary<ItemType, double>();
             var standardTargets = new Dictionary<ItemType, int>();
-            var fallback = new Dictionary<ItemType, int>();
+            var fallback = new HashSet<ItemType>();
             var menu = runtime.Menu;
             for (var m = 0; m < menu.Count; m++)
             {
-                var recipe = menu[m].Recipe;
+                var recipe = menu[m].GetRecipe(venue);
                 if (recipe == null || recipe.Output.type == null) continue;
                 var id = recipe.Output.type.Guid;
                 var hasHistory = history.Contains(id) && today > 1;
@@ -117,12 +120,11 @@ internal static class EstimatedShopping
                 {
                     var item = input.DefaultItem;
                     if (item == null) continue;
-                    standardTargets[item] = standardTargets.GetValueOrDefault(item) + ShoppingListManager.demandAmount;
+                    // Match native demand accumulation, including stocked items that
+                    // GetIngredientsDemand omits when "Ignore venue stock" is selected.
+                    standardTargets[item] = standardTargets.GetValueOrDefault(item) + runtime.GetSupplyTarget(item);
                     ingredients[item] = ingredients.GetValueOrDefault(item) + (hasHistory ? daily * input.Amount : 0);
-                    if (!hasHistory && !ModOptions.DeductVenueStock.Value)
-                        fallback[item] = fallback.GetValueOrDefault(item) + ShoppingListManager.demandAmount;
-                    else if (!hasHistory && native != null && native.LowIngredients.TryGetValue(item, out var standard))
-                        fallback[item] = Math.Max(fallback.GetValueOrDefault(item), standard.demand);
+                    if (!hasHistory) fallback.Add(item);
                 }
             }
             var data = new VenueData { LowIngredients = new ItemMap() };
@@ -135,12 +137,13 @@ internal static class EstimatedShopping
                 }
             foreach (var pair in ingredients)
             {
-                var target = Enabled ? DemandEstimate.Target(pair.Value, fallback.GetValueOrDefault(pair.Key))
-                    : standardTargets.GetValueOrDefault(pair.Key);
+                var standard = standardTargets[pair.Key];
+                var target = Enabled ? DemandEstimate.Target(pair.Value, fallback.Contains(pair.Key) ? standard : 0)
+                    : standard;
                 var stock = runtime.InventoryData.itemContainer.GetItemCount(pair.Key, out _);
                 var needed = DemandEstimate.ShoppingNeed(target, stock, ModOptions.DeductVenueStock.Value);
                 if (needed > 0)
-                    data.LowIngredients[pair.Key] = new Data { amount = target - needed, demand = target };
+                    data.LowIngredients[pair.Key] = new Data(target - needed, target);
             }
             venues[venue] = data;
             foreach (var pair in data.LowIngredients)
@@ -157,7 +160,7 @@ internal static class EstimatedShopping
         foreach (var pair in totals)
         {
             var carried = player.Inventory.Items.GetItemCount(pair.Key);
-            if (pair.Value > carried) items[pair.Key] = new Data { amount = 0, demand = pair.Value };
+            if (pair.Value > carried) items[pair.Key] = new Data(0, pair.Value);
         }
         Demands = venues; Items = items;
         return new Scope(manager, venues, items);

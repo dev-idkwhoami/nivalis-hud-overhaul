@@ -15,7 +15,6 @@
     <Compile Include="../src/DemandEstimate.cs" Link="DemandEstimate.cs" />
     <Compile Include="../src/MealSalesTotals.cs" Link="MealSalesTotals.cs" />
     <Compile Include="../src/QuickSlots.cs" Link="QuickSlots.cs" />
-    <Compile Include="../src/QuestPinFilter.cs" Link="QuestPinFilter.cs" />
     <Compile Include="../src/StaffOrder.cs" Link="StaffOrder.cs" />
     <Compile Include="../src/SearchDelay.cs" Link="SearchDelay.cs" />
     <Compile Include="../src/SearchText.cs" Link="SearchText.cs" />

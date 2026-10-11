@@ -7,7 +7,7 @@ namespace NivalisMods.HudOverhaul;
 
 internal static class ModOptions
 {
-    internal static Setting<bool> Search = null!, Sorting = null!, QuickActions = null!, Staff = null!, Quests = null!,
+    internal static Setting<bool> Search = null!, Sorting = null!, QuickActions = null!, Staff = null!,
         Scan = null!, Conditions = null!, ReviewTime = null!, FastReviews = null!, Sales = null!, Ingredients = null!, Screens = null!;
     internal static Setting<bool> VerboseLogging = null!;
     internal static Setting<bool> QuestHudVisible = null!;
@@ -18,7 +18,7 @@ internal static class ModOptions
         Setting<bool> Feature(string key, string label) => features.Toggle(key, Labels.Get("settings.option." + label), true);
         Search = Feature("Search", "search"); Sorting = Feature("Sorting", "sorting");
         QuickActions = Feature("QuickActions", "quickActions"); Staff = Feature("StaffOrdering", "staff");
-        Quests = Feature("PinnedQuests", "quests"); Scan = Feature("ScanColors", "scan");
+        Scan = Feature("ScanColors", "scan");
         QuestHudVisible = Feature("QuestHudVisible", "questHudVisible");
         QuestHudVisible.Changed += _ => Plugin.Guard("Apply quest HUD visibility", QuestHudVisibility.ApplySetting);
         Conditions = Feature("ConditionOrder", "conditions"); ReviewTime = Feature("ReviewTimestamps", "reviewTime");
@@ -29,16 +29,12 @@ internal static class ModOptions
         DeductVenueStock = shopping.Choice("VenueStock", Labels.Get("settings.option.venueStock"), true,
             new[] { new Choice<bool>(true, Labels.Get("shopping.stock.deduct")), new Choice<bool>(false, Labels.Get("shopping.stock.ignore")) });
         StockDays = shopping.Stepper("StockDays", Labels.Get("settings.option.stockDays"), 1, 1, 14);
+        StockDays.Hint = "Days of supplies to plan for in Estimated mode; Standard uses the venue restocking strategy.";
+        StockDays.Changed += _ => { if (EstimatedShopping.Enabled) Plugin.Guard("Refresh shopping stock days", EstimatedShopping.RefreshPanels); };
         Screens = farm.Toggle("Screens", Labels.Get("settings.option.screens"), true);
         VerboseLogging = developer.AddVerboseLogging(false,
             "Detailed diagnostics in BepInEx/LogOutput.log. Saved gameplay history is independent of logging verbosity.");
         DeductVenueStock.Changed += _ => Plugin.Guard("Refresh shopping stock mode", EstimatedShopping.RefreshPanels);
-        Quests.Changed += _ => Plugin.Guard("Refresh quest setting", () =>
-        {
-            if (!QuestPatchRegistration.Installed) return;
-            QuestTracking.Invalidate();
-            foreach (var hud in UnityEngine.Object.FindObjectsOfType<ActiveJournalEntriesUi>()) hud.Refresh();
-        });
         Scan.Changed += _ => { if (!Scan.Value) ScanMarkerColors.RestoreAll(); };
         Sorting.Changed += _ => Plugin.Guard("Refresh sorting setting", FilterExtension.RefreshSettings);
         Screens.Changed += _ => Plugin.Guard("Refresh farm screens setting", () =>

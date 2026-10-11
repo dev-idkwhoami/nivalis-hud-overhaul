@@ -98,17 +98,3 @@ internal static class HeldEquipmentTracePatch
         if (equipment != null) EquipmentTrace.Snapshot(equipment, "HoldObject");
     });
 }
-
-[HarmonyPatch(typeof(Nivalis.Locale.UI.InventoryItemDetailsDisplay), nameof(Nivalis.Locale.UI.InventoryItemDetailsDisplay.OnHoldButtonClicked))]
-internal static class EquipmentDetailsTracePatch
-{
-    [HarmonyPrefix]
-    private static void Prefix(out string __state)
-    {
-        __state = EquipmentTrace.Source;
-        EquipmentTrace.Source = "inventory-details";
-    }
-
-    [HarmonyFinalizer]
-    private static void Finalizer(string __state) => EquipmentTrace.Source = __state;
-}
