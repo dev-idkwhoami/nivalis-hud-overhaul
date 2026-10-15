@@ -8,6 +8,7 @@ using Nivalis.CraftingSystem;
 using Nivalis.InventorySystem;
 using Nivalis.Locale;
 using Nivalis.Locale.UI;
+using Nivalis.GhostSystem.CustomerLoop;
 
 namespace NivalisMods.HudOverhaul;
 
@@ -18,9 +19,8 @@ internal static class ExpandedSearch
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate void ListFilter(IntPtr self, IntPtr items, IntPtr venue, IntPtr method);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate byte RecipePredicate(IntPtr self, IntPtr item, IntPtr method);
+    private delegate byte RecipePredicate(IntPtr item, IntPtr search, IntPtr venue, IntPtr method);
     private static readonly List<INativeDetour> Hooks = new();
-    private static RecipePredicate _recipeOriginal = null!;
     [ThreadStatic] internal static SearchCatalog? Catalog;
     private static bool _reportedError;
 
@@ -46,12 +46,22 @@ internal static class ExpandedSearch
                 original = hook.GenerateTrampoline<ListFilter>();
                 if (Plugin.IsVerbose) Plugin.Verbose($"Prepared item search hook for {entryType.Name}.");
             }
-            var predicateType = typeof(InventoryItemFilteringUi.__c__DisplayClass17_0<IRecipe>);
-            var predicateInfo = (IntPtr)predicateType.GetFields(BindingFlags.Static | BindingFlags.NonPublic)
-                .Single(f => f.Name.StartsWith("NativeMethodInfoPtr__FilterResult_b__0_")).GetValue(null)!;
-            var recipeHook = INativeDetour.Create(MethodPointer(predicateInfo), (RecipePredicate)FilterRecipe);
-            Hooks.Add(recipeHook);
-            _recipeOriginal = recipeHook.GenerateTrampoline<RecipePredicate>();
+            // The game now uses a named static matcher, rather than a captured
+            // lambda. Preserve its query, venue and generic context unchanged.
+            var recipeStore = typeof(InventoryItemFilteringUi).GetNestedTypes(BindingFlags.NonPublic)
+                .Single(t => t.Name.StartsWith("MethodInfoStoreGeneric_SearchIsMatchingRecipeTag_Private_Static_Boolean_T_String_Venue_"));
+            foreach (var entryType in new[] { typeof(IRecipe), typeof(MealMenuItem) })
+            {
+                var recipeInfo = (IntPtr)recipeStore.MakeGenericType(entryType)
+                    .GetField("Pointer", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
+                var pointer = MethodPointer(recipeInfo);
+                if (!installed.Add(pointer)) continue;
+                RecipePredicate original = null!;
+                RecipePredicate replacement = (item, search, venue, method) => FilterRecipe(original, item, search, venue, method);
+                var hook = INativeDetour.Create(pointer, replacement);
+                Hooks.Add(hook);
+                original = hook.GenerateTrampoline<RecipePredicate>();
+            }
             foreach (var hook in Hooks) hook.Apply();
             if (Plugin.IsVerbose) Plugin.Verbose("Expanded search enabled: item tags, recipe tags, ingredients and equipment.");
         }
@@ -142,19 +152,16 @@ internal static class ExpandedSearch
         }
     }
 
-    private static byte FilterRecipe(IntPtr self, IntPtr item, IntPtr method)
+    private static byte FilterRecipe(RecipePredicate native, IntPtr item, IntPtr search, IntPtr venue, IntPtr method)
     {
-        var original = _recipeOriginal(self, item, method);
+        var original = native(item, search, venue, method);
         if (original != 0 || !ModOptions.Search.Value) return original;
         try
         {
-            var field = IL2CPP.il2cpp_class_get_field_from_name(IL2CPP.il2cpp_object_get_class(self), "<>4__this");
-            if (field == IntPtr.Zero) throw new InvalidOperationException("Recipe search owner field missing.");
-            var filterPtr = Marshal.ReadIntPtr(self, checked((int)IL2CPP.il2cpp_field_get_offset(field)));
-            var filter = new InventoryItemFilteringUi(filterPtr);
-            var query = filter.searchField.text;
+            var query = IL2CPP.Il2CppStringToManaged(search);
+            if (string.IsNullOrWhiteSpace(query)) return original;
             var entry = new Il2CppSystem.Object(item);
-            var recipe = entry.TryCast<IRecipe>() ?? entry.TryCast<MealMenuItem>()?.Recipe;
+            var recipe = entry.TryCast<IRecipe>() ?? entry.TryCast<MealMenuItem>()?.GetRecipe(venue == IntPtr.Zero ? null : new Venue(venue));
             if (recipe != null && (Catalog ?? new SearchCatalog()).RecipeMatches(recipe, query)) return 1;
         }
         catch (Exception e) { Report(e); }

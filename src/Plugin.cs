@@ -14,7 +14,7 @@ namespace NivalisMods.HudOverhaul;
 [BepInDependency(SettingsRegistry.PluginId, ">=1.0.3")]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.3";
+    public const string Version = "1.1.4";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
