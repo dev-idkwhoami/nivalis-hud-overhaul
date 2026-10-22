@@ -57,6 +57,21 @@ Check("empty filtered list", [], false);
 Check("all unknown preserves original order", [null, double.NaN, null], true, 0, 1, 2);
 Check("active tasks preserve within-group relevance", [0, 1, 1, 0], true, 1, 2, 0, 3);
 Check("negative and infinite values", [double.NegativeInfinity, -2, double.PositiveInfinity, 0], true, 2, 3, 1, 0);
+// A virtual journal can have many more data entries than realized UI rows.
+var journalTimes = Enumerable.Range(0, 250).Select(i => (double?)(i % 37)).ToArray();
+var journalOrder = SortOrder.Indices(journalTimes, true);
+foreach (var selected in new[] { -1, 0, 17, 249, 250 })
+{
+    var mapped = SortOrder.RemapSelection(journalOrder, selected);
+    if (selected < 0 || selected >= journalTimes.Length)
+    {
+        if (mapped != -1) throw new Exception("Invalid journal selection became selected");
+    }
+    else if (mapped < 0 || journalOrder[mapped] != selected)
+        throw new Exception("Journal sorting changed the selected quest");
+    checks++;
+}
+Check("journal ties preserve native relevance", [10, 20, 10, 20], true, 1, 3, 0, 2);
 Console.WriteLine($"Passed {checks} sorting checks (including input preservation and permutation integrity).");
 
 var window = new ReviewWindow();

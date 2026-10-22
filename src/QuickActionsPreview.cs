@@ -322,20 +322,16 @@ internal static class QuickActionsClosedPatch
     private static void Postfix(RadialMenuUI __instance) => QuickActionsPreview.Closed(__instance);
 }
 
-[HarmonyPatch(typeof(PlayerInventoryUI), nameof(PlayerInventoryUI.RefreshInventoryDisplay))]
+// Inventory rows are recycled by the native list as the player scrolls.
+[HarmonyPatch(typeof(InventoryItemDisplayUI), nameof(InventoryItemDisplayUI.RefreshHoldButton))]
 internal static class QuickAssignInventoryPatch
 {
     [HarmonyPostfix]
-    private static void Postfix(PlayerInventoryUI __instance) => Plugin.Guard("Refresh inventory Assign buttons", () =>
+    private static void Postfix(InventoryItemDisplayUI __instance) => Plugin.Guard("Refresh inventory Assign button", () =>
     {
-        var list = __instance.inventoryItems;
-        for (var i = 0; i < list.DisplayedCount; i++)
-        {
-            var row = list.GetItem(i).GameObject.GetComponent<InventoryItemDisplayUI>();
-            if (row == null) continue;
-            var control = row.GetComponent<QuickAssignButton>() ?? row.gameObject.AddComponent<QuickAssignButton>();
-            control.Refresh(row);
-        }
+        if (__instance.GetComponentInParent<PlayerInventoryUI>() == null) return;
+        var control = __instance.GetComponent<QuickAssignButton>() ?? __instance.gameObject.AddComponent<QuickAssignButton>();
+        control.Refresh(__instance);
     });
 }
 

@@ -11,7 +11,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
-using ScrollRectList = Il2CppSystem.Collections.Generic.List<UnityEngine.UI.ScrollRect>;
+using ScrollRectArray = Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<UnityEngine.UI.ScrollRect>;
 
 namespace NivalisMods.HudOverhaul;
 
@@ -20,7 +20,7 @@ public sealed class CombinedIngredients : MonoBehaviour
     private static CombinedIngredients? _active;
     private MenuModificationWindow _window = null!;
     private UIWindow _scrollOwner = null!;
-    private readonly ScrollRectList _wheelScrolls = new();
+    private readonly ScrollRectArray _wheelScrolls = new(1);
     private GameObject? _view;
     private UIPanel? _panel;
     private int _showFrame = -1;
@@ -80,7 +80,7 @@ public sealed class CombinedIngredients : MonoBehaviour
             var list = scrollObject.GetComponent<ItemListUI>();
             if (list != null) Object.DestroyImmediate(list);
             _scroll = scrollObject.GetComponent<ScrollRect>();
-            _wheelScrolls.Add(_scroll);
+            _wheelScrolls[0] = _scroll;
             _scroll.onValueChanged = new ScrollRect.ScrollRectEvent();
             // Restore the copied list even when Statistics was hidden at clone
             // time; otherwise all new rows retain the same default position.
@@ -229,7 +229,7 @@ public sealed class CombinedIngredients : MonoBehaviour
     }
 
     [HideFromIl2Cpp]
-    internal static ScrollRectList? WheelScrolls(IScrollRectsProvider provider)
+    internal static ScrollRectArray? WheelScrolls(UIWindow provider)
     {
         var active = _active;
         if (active == null || !active._showing || active._panel == null || !active._panel.IsVisible ||
@@ -243,16 +243,16 @@ public sealed class CombinedIngredients : MonoBehaviour
 
 }
 
-[HarmonyPatch(typeof(UIScrollViewHandler), nameof(UIScrollViewHandler.GetScrollRects))]
+[HarmonyPatch(typeof(UIWindow), nameof(UIWindow.GetScrollRects))]
 internal static class CombinedIngredientsWheelPatch
 {
     [HarmonyPrefix]
-    private static bool Prefix(IScrollRectsProvider __0, ref ScrollRectList __result)
+    private static bool Prefix(UIWindow __instance, ref ScrollRectArray __result)
     {
-        // Native wheel input uses the venue window's cached scroll list, not
-        // pointer events. Our separate UIPanel is absent from that list. Route
-        // this window to the overlay without changing the native cache.
-        var scrolls = CombinedIngredients.WheelScrolls(__0);
+        // Update 6 asks each active window for its scroll rectangles directly.
+        // Route only the owning venue window to our visible overlay, leaving
+        // its native scroll array intact for when the overlay closes.
+        var scrolls = CombinedIngredients.WheelScrolls(__instance);
         if (scrolls == null) return true;
         __result = scrolls;
         return false;

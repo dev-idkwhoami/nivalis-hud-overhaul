@@ -14,7 +14,7 @@ namespace NivalisMods.HudOverhaul;
 [BepInDependency(SettingsRegistry.PluginId, ">=1.0.3")]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.5";
+    public const string Version = "1.1.6";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
@@ -85,11 +85,17 @@ internal static class MenuPatch
 {
     [HarmonyPostfix, HarmonyPatch(nameof(MenuModificationWindow.RefreshMenuList))]
     private static void Menu(MenuModificationWindow __instance) => Plugin.Guard("Sort venue menu", () =>
-        ListSorter.Attach(__instance.menuItemList, __instance.menuListFilter));
+    {
+        ListSorter.Get(__instance.menuItemList).ApplyDataOrder = mode => DataListSorting.Menu(__instance, mode);
+        ListSorter.Attach(__instance.menuItemList, __instance.menuListFilter);
+    });
 
     [HarmonyPostfix, HarmonyPatch(nameof(MenuModificationWindow.RefreshRecipeList))]
     private static void Recipes(MenuModificationWindow __instance) => Plugin.Guard("Sort known recipes", () =>
-        ListSorter.Attach(__instance.recipeItemList, __instance.recipeListFilter));
+    {
+        ListSorter.Get(__instance.recipeItemList).ApplyDataOrder = mode => DataListSorting.Recipes(__instance, mode);
+        ListSorter.Attach(__instance.recipeItemList, __instance.recipeListFilter);
+    });
 
     [HarmonyPostfix, HarmonyPatch(nameof(MenuModificationWindow.MenuItemPriceChangeListener))]
     private static void PriceChanged(MenuModificationWindow __instance) => Plugin.Guard("Refresh price order", () =>
@@ -108,7 +114,10 @@ internal static class VendorPatch
 {
     [HarmonyPostfix]
     private static void Postfix(ShopUiVendorPanel __instance) => Plugin.Guard("Sort vendor stock", () =>
-        ListSorter.Attach(__instance.itemsList, __instance.itemFiltering));
+    {
+        ListSorter.Get(__instance.itemsList).ApplyDataOrder = mode => DataListSorting.Vendor(__instance, mode);
+        ListSorter.Attach(__instance.itemsList, __instance.itemFiltering);
+    });
 }
 
 [HarmonyPatch(typeof(JournalUI), nameof(JournalUI.Refresh))]
@@ -116,13 +125,16 @@ internal static class JournalPatch
 {
     [HarmonyPostfix]
     private static void Postfix(JournalUI __instance) => Plugin.Guard("Journal sorting", () =>
+    {
+        ListSorter.Get(__instance.entriesListUi).ApplyDataOrder = mode => DataListSorting.Journal(__instance, mode);
         SortDropdown.Attach(__instance.entriesListUi, __instance.entriesScrollRect,
             new[] {
                 new SortMode(Labels.Get("journal.relevant"), SortKey.Native),
                 new SortMode(Labels.Get("journal.updated.desc"), SortKey.Updated, true),
                 new SortMode(Labels.Get("journal.updated.asc"), SortKey.Updated),
                 new SortMode(Labels.Get("journal.active"), SortKey.Active, true)
-            }, __instance.Refresh));
+            }, __instance.Refresh);
+    });
 }
 
 [HarmonyPatch(typeof(LocaleReviewOverviewTab), nameof(LocaleReviewOverviewTab.RefreshReviewList))]
@@ -135,8 +147,11 @@ internal static class ReviewsPatch
     private static void Postfix(LocaleReviewOverviewTab __instance)
     {
         if (ListSorter.Get(__instance.reviewList).ExternalOrder) return;
-        Plugin.Guard("Review sorting", () => SortDropdown.Attach(__instance.reviewList,
-            __instance.scrollRect, ReviewModes.All, __instance.RefreshReviewList));
+        Plugin.Guard("Review sorting", () =>
+        {
+            ListSorter.Get(__instance.reviewList).ApplyDataOrder = mode => DataListSorting.Reviews(__instance, mode);
+            SortDropdown.Attach(__instance.reviewList, __instance.scrollRect, ReviewModes.All, __instance.RefreshReviewList);
+        });
     }
 }
 

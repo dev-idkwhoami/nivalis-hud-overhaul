@@ -5,6 +5,13 @@ internal sealed record SortMode(string Label, SortKey Key, bool Descending = fal
 
 internal static class SortOrder
 {
+    internal static int RemapSelection(IReadOnlyList<int> order, int selected)
+    {
+        if (selected < 0) return -1;
+        for (var i = 0; i < order.Count; i++) if (order[i] == selected) return i;
+        return -1;
+    }
+
     // Missing values always go last. Ties retain the game's existing order.
     internal static int[] Indices(IReadOnlyList<double?> values, bool descending)
     {

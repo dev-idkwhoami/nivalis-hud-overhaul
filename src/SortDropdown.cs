@@ -73,6 +73,25 @@ internal static class SortDropdown
             var layout = clone.GetComponent<LayoutElement>();
             if (layout != null) layout.ignoreLayout = true;
 
+            // The source caption retains a narrow fixed-width rect. Stretch
+            // it across our wider control, reserving the arrow area on the right.
+            var caption = dropdown.captionText;
+            if (caption != null)
+            {
+                var captionRect = caption.rectTransform;
+                captionRect.anchorMin = Vector2.zero;
+                captionRect.anchorMax = Vector2.one;
+                captionRect.offsetMin = new Vector2(40, 0);
+                captionRect.offsetMax = new Vector2(-40, 0);
+                caption.enableWordWrapping = false;
+                caption.margin = Vector4.zero;
+                // Ellipsis can suppress the whole line when the source font's
+                // line metrics exceed this compact caption's height.
+                caption.overflowMode = TextOverflowModes.Overflow;
+                caption.alignment = TextAlignmentOptions.MidlineLeft;
+                dropdown.RefreshShownValue();
+            }
+
             var navigation = dropdown.navigation;
             navigation.mode = Navigation.Mode.Automatic;
             dropdown.navigation = navigation;

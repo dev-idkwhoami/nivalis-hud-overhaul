@@ -69,10 +69,10 @@ internal static class LoadingStageTimingPatch
         // Do not detour BeginUpdate: its nullable value argument fails native
         // trampoline marshalling when absent, skipping the actual list reset.
         // Time reference-type row Show instead of the value-type Review method.
-        foreach (var name in new[] { "EndUpdate", "AddItem", "CreateNewItemDisplay" })
+        foreach (var name in new[] { nameof(ItemListUI.EndUpdate), nameof(ItemListUI.AddItem), nameof(ItemListUI.CreateNewItemDisplay) })
             yield return AccessTools.Method(typeof(ItemListUI), name);
         yield return AccessTools.Method(typeof(ReviewItemDisplayUi), nameof(ReviewItemDisplayUi.Show));
-        yield return AccessTools.Method(typeof(ShopUiVendorPanel), "CreateEntry");
+        // Update 6 removed CreateEntry; Initialize below still measures row setup.
         yield return AccessTools.Method(typeof(ShopItemDisplayUI), nameof(ShopItemDisplayUI.Initialize));
         // The concrete overloads can be timed safely; generic shared methods
         // need separate handling in IL2CPP and are deliberately excluded.

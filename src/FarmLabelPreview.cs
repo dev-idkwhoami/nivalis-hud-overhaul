@@ -146,15 +146,15 @@ internal static class FarmLabelPreview
 
 // Place starts a coroutine; its second step finishes physics setup and invokes
 // the game's completion callback. Attach afterward, never to a placement ghost.
-[HarmonyPatch(typeof(HoldableEntity._PlaceRoutine_d__94), nameof(HoldableEntity._PlaceRoutine_d__94.MoveNext))]
+[HarmonyPatch(typeof(HoldableEntity._PlaceRoutine_d__104), nameof(HoldableEntity._PlaceRoutine_d__104.MoveNext))]
 internal static class FarmScreenPlacementPatch
 {
     [HarmonyPrefix]
-    private static void Prefix(HoldableEntity._PlaceRoutine_d__94 __instance, out bool __state) =>
+    private static void Prefix(HoldableEntity._PlaceRoutine_d__104 __instance, out bool __state) =>
         __state = __instance.__1__state == 1;
 
     [HarmonyPostfix]
-    private static void Postfix(HoldableEntity._PlaceRoutine_d__94 __instance, bool __result, bool __state)
+    private static void Postfix(HoldableEntity._PlaceRoutine_d__104 __instance, bool __result, bool __state)
     {
         if (!__state || __result) return;
         Plugin.Guard("Farm screen placement", () =>

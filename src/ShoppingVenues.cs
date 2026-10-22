@@ -13,7 +13,6 @@ namespace NivalisMods.HudOverhaul;
 
 public sealed class ShoppingVenues : MonoBehaviour
 {
-    private static readonly System.Reflection.MethodInfo? NativeSortEntries = AccessTools.Method(typeof(ShoppingListPanel), "SortEntries");
     private ShoppingListPanel _panel = null!;
     private TMP_Dropdown _dropdown = null!;
     private Venue? _selected;
@@ -205,43 +204,27 @@ public sealed class ShoppingVenues : MonoBehaviour
     internal static void RestoreRow(ShoppingListItemDisplayUI ui)
     {
         var view = ui.GetComponentInParent<ShoppingVenues>();
-        if (view != null && !view._applying) view.UpdateRow(ui);
+        if (view != null) view.UpdateRow(ui);
     }
 
     [HideFromIl2Cpp]
     private void Apply()
     {
         var list = _panel.itemsList;
-        var kept = new List<IItemDisplayUI>();
-        var hidden = new List<IItemDisplayUI>();
-        var count = list.DisplayedCount;
-        for (var i = 0; i < count; i++)
+        var data = _panel._entries;
+        var snapshot = Enumerable.Range(0, data.Count).Select(i => data[i]).ToArray();
+        var order = Enumerable.Range(0, snapshot.Length).Where(i =>
         {
-            var display = list.GetItem(i);
-            var ui = display.GameObject.GetComponent<ShoppingListItemDisplayUI>();
-            if (ui == null) { kept.Add(display); continue; }
-            var selectedDemand = _selected == null ? null : Demand(_selected, ui.ItemType);
-            if (_selected != null && (selectedDemand == null || selectedDemand.Value.MissingItems <= 0))
-            {
-                ui.ForceTurnOff();
-                hidden.Add(display);
-                continue;
-            }
-            kept.Add(display);
-            UpdateRow(ui);
-        }
-        // Keep the native allocation pool intact, with visible entries first.
-        // GetFirstAvailable/IsItemOnList and vendor selection see the filtered set.
-        var order = kept.Concat(hidden).ToArray();
-        for (var i = 0; i < order.Length; i++) list._itemDisplayInstances[i] = order[i];
-        list._displayedInstanceCount = kept.Count;
-        list.EndUpdate();
-        // Some game builds sort inside RefreshItemsList and expose no SortEntries method.
-        if (NativeSortEntries != null) NativeSortEntries.Invoke(_panel, null);
-        else _panel.UpdateNavigation();
-        if (list._itemDisplayParent.TryCast<RectTransform>() is { } rect)
-            LayoutRebuilder.MarkLayoutForRebuild(rect);
-        if (Plugin.IsVerbose) Plugin.Verbose($"Shopping venues: {(_selected == null ? "all" : _selected.EntryName)}, {kept.Count} items, {_venues.Count} venues.");
+            if (_selected == null) return true;
+            var demand = Demand(_selected, snapshot[i].Item);
+            return demand is { MissingItems: > 0 };
+        }).ToArray();
+        // Native refresh has already sorted availability/name. Filter that full
+        // data set so off-screen rows and native availability queries agree.
+        DataListSorting.Replace<ShoppingListPanel.ShoppingListEntry, ShoppingListItemDisplayUI>(
+            list, data, snapshot, order);
+        _panel.UpdateNavigation();
+        if (Plugin.IsVerbose) Plugin.Verbose($"Shopping venues: {(_selected == null ? "all" : _selected.EntryName)}, {data.Count} items, {_venues.Count} venues.");
     }
 }
 
@@ -258,4 +241,13 @@ internal static class ShoppingVenueDetailsPatch
     [HarmonyPostfix]
     private static void Postfix(ShoppingListItemDisplayUI __instance) =>
         Plugin.Guard("Shopping venue details", () => ShoppingVenues.RestoreRow(__instance));
+}
+
+// Apply venue labels to every recycled row, including rows first seen on scroll.
+[HarmonyPatch(typeof(ShoppingListItemDisplayUI), nameof(ShoppingListItemDisplayUI.InitializeVenuesInfo))]
+internal static class ShoppingVenueRowPatch
+{
+    [HarmonyPostfix]
+    private static void Postfix(ShoppingListItemDisplayUI __instance) =>
+        Plugin.Guard("Shopping venue row", () => ShoppingVenues.RestoreRow(__instance));
 }

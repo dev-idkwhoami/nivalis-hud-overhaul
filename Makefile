@@ -26,7 +26,7 @@ build: check-sdk check-game
 	@"$$DOTNET" build "$$PROJECT" --configuration "$$CONFIGURATION" "-p:GamePath=$$(cd "$$GAME_PATH" && pwd)" --nologo
 
 # These checks use pure managed sources and do not need game assemblies.
-test: check-sdk test-quest-hud test-shopping test-vendor-search
+test: check-sdk test-quest-hud test-shopping test-vendor-search test-list-binding
 	@"$$DOTNET" run --project tests/SortingChecks.csproj --configuration "$$CONFIGURATION"
 
 test-vendor-search: check-sdk
@@ -55,3 +55,7 @@ check-release: check-sdk
 
 check-sdk:
 	@command -v "$$DOTNET" >/dev/null 2>&1 || { printf '%s\n' '.NET SDK not found. Install SDK 8 on PATH, place it in .tools/dotnet/, or pass DOTNET="/path/to/dotnet".'; exit 1; }
+
+.PHONY: test-list-binding
+test-list-binding: check-sdk
+	@"$$DOTNET" run --project tools/ListBindingChecks/ListBindingChecks.csproj --configuration "$$CONFIGURATION"

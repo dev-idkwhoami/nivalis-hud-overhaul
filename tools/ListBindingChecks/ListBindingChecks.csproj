@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <OutputPath>$(MSBuildProjectDirectory)/bin/</OutputPath><GenerateDependencyFile>true</GenerateDependencyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/DataListSorting.cs" Link="DataListSorting.cs" />
+    <Compile Include="../../src/SortOrder.cs" Link="SortOrder.cs" />
+  </ItemGroup>
+</Project>
