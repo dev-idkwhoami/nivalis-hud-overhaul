@@ -48,11 +48,11 @@ internal static class DataListSorting
         var snapshot = Enumerable.Range(0, data.Count).Select(i => data[i]).ToArray();
         var order = SortOrder.Indices(snapshot.Select(value).ToArray(), mode.Descending);
         if (order.Select((source, target) => source == target).All(same => same)) return;
-        Replace<TData, TView>(list, data, snapshot, order);
+        Replace<TData, TView>(list, data, order);
     }
 
     internal static void Replace<TData, TView>(ItemListUI list,
-        Il2CppSystem.Collections.Generic.List<TData> data, TData[] snapshot, int[] order)
+        Il2CppSystem.Collections.Generic.List<TData> data, int[] order)
         where TView : class
     {
         // Preserve the exact callback constructed by the native refresh,
@@ -61,8 +61,20 @@ internal static class DataListSorting
         var context = list._binder?.Target?.TryCast<ItemListUI.__c__DisplayClass101_0<TData, TView>>();
         var callback = context?.bind ?? throw new InvalidOperationException("Native list binding context is unavailable.");
         var selected = SortOrder.RemapSelection(order, list.SelectedIndex);
-        data.Clear();
-        foreach (var source in order) data.Add(snapshot[source]);
+        // IL2CPP value-type entries must stay in native storage. Managed Add or
+        // indexer writes can store boxed pointers instead of the struct values.
+        var current = Enumerable.Range(0, data.Count).ToList();
+        for (var target = 0; target < order.Length; target++)
+        {
+            var source = current.IndexOf(order[target], target);
+            if (source <= target) continue;
+            data.Reverse(target, source - target + 1);
+            data.Reverse(target + 1, source - target);
+            current.Reverse(target, source - target + 1);
+            current.Reverse(target + 1, source - target);
+        }
+        if (data.Count > order.Length)
+            data.RemoveRange(order.Length, data.Count - order.Length);
         list.SetItems<TData, TView>(data.Cast<Il2CppSystem.Collections.Generic.IReadOnlyList<TData>>(), callback, selected);
     }
 }

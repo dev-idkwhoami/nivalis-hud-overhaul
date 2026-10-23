@@ -221,8 +221,9 @@ public sealed class ShoppingVenues : MonoBehaviour
         }).ToArray();
         // Native refresh has already sorted availability/name. Filter that full
         // data set so off-screen rows and native availability queries agree.
-        DataListSorting.Replace<ShoppingListPanel.ShoppingListEntry, ShoppingListItemDisplayUI>(
-            list, data, snapshot, order);
+        if (order.Length != snapshot.Length)
+            DataListSorting.Replace<ShoppingListPanel.ShoppingListEntry, ShoppingListItemDisplayUI>(
+                list, data, order);
         _panel.UpdateNavigation();
         if (Plugin.IsVerbose) Plugin.Verbose($"Shopping venues: {(_selected == null ? "all" : _selected.EntryName)}, {data.Count} items, {_venues.Count} venues.");
     }

@@ -31,10 +31,17 @@ namespace Il2CppSystem.Collections.Generic
     public sealed class List<T> : Il2CppSystem.Object, IReadOnlyList<T>
     {
         private readonly System.Collections.Generic.List<T> _items = new();
-        public T this[int i] { get => _items[i]; set => _items[i] = value; }
+        public bool RejectManagedWrites;
+        private void CheckWrite()
+        {
+            if (RejectManagedWrites) throw new InvalidOperationException("Native entries must not be written back from managed code.");
+        }
+        public T this[int i] { get => _items[i]; set { CheckWrite(); _items[i] = value; } }
         public int Count => _items.Count;
-        public void Add(T item) => _items.Add(item);
-        public void Clear() => _items.Clear();
+        public void Add(T item) { CheckWrite(); _items.Add(item); }
+        public void Clear() { CheckWrite(); _items.Clear(); }
+        public void Reverse(int index, int count) => _items.Reverse(index, count);
+        public void RemoveRange(int index, int count) => _items.RemoveRange(index, count);
         public IEnumerator<T> GetEnumerator() => _items.GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
@@ -90,6 +97,7 @@ namespace Nivalis.UI
             var callback = (owner != null ? Il2CppSystem.Delegate.CreateDelegate(type, owner, method)
                 : Il2CppSystem.Delegate.CreateDelegate(type, new Il2CppSystem.Type(staticOwner!), method))
                 .Cast<Il2CppSystem.Action<TView,TData,int,bool>>();
+            data.RejectManagedWrites = true;
             OriginalCallback = callback;
             SetItems(data, callback, SelectedIndex);
         }
