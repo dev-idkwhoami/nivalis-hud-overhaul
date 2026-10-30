@@ -74,26 +74,11 @@ foreach (var selected in new[] { -1, 0, 17, 249, 250 })
 Check("journal ties preserve native relevance", [10, 20, 10, 20], true, 1, 3, 0, 2);
 Console.WriteLine($"Passed {checks} sorting checks (including input preservation and permutation integrity).");
 
-var window = new ReviewWindow();
 void Geometry(string name, bool ok)
 {
     if (!ok) throw new Exception(name);
     checks++;
 }
-window.Reset([], 10);
-Geometry("empty review window", window.Height == 0 && window.Visible(0, 500) == (0, -1));
-window.Reset([100, 200, 50], 10);
-Geometry("variable row heights and gaps", window.Height == 370 && window.Top(2) == 320);
-Geometry("row boundary lookup", window.At(109) == 0 && window.At(110) == 1 && window.At(320) == 2);
-Geometry("elastic scroll beyond either end", window.At(-500) == 0 && window.At(5000) == 2);
-Geometry("visible rows without buffer", window.Visible(120, 100, 0) == (1, 1));
-Geometry("buffer bounded by list ends", window.Visible(120, 100) == (0, 2));
-window.Reset(Enumerable.Repeat(100f, 10000), 10);
-var range = window.Visible(550000, 600);
-Geometry("large list uses bounded visible range", range.Last - range.First + 1 <= 11 && range.First > 4000);
-window.Reset([300, 100], 5);
-Geometry("remeasuring updates total and offsets", window.Height == 405 && window.Top(1) == 305);
-Console.WriteLine($"Passed {checks} total sorting and virtual-list geometry checks.");
 
 var labelsFolder = Path.Combine(Path.GetTempPath(), "hud-label-checks-" + Guid.NewGuid());
 var labelsPath = Path.Combine(labelsFolder, Labels.FileName);
@@ -102,12 +87,12 @@ try
 {
     Labels.Load(labelsPath, warnings.Add);
     Geometry("labels generated on first load", File.Exists(labelsPath) && Labels.Get("sort.price.asc") == "Price: low to high");
-    var custom = "{\"sort.price.asc\":\"Preis: aufsteigend\",\"reviews.timestamp\":\"{day} — {time}\"}";
+    var custom = "{\"sort.price.asc\":\"Preis: aufsteigend\",\"reviews.timestamp\":\"{day} — {time}\",\"settings.option.fastReviews\":\"Old label\",\"future.label\":42}";
     File.WriteAllText(labelsPath, custom);
     Labels.Load(labelsPath, warnings.Add);
     Geometry("UTF-8 translations and missing-key fallback", Labels.Get("sort.price.asc") == "Preis: aufsteigend" && Labels.Get("journal.active") == "Active tasks first");
     Geometry("timestamp placeholders", Labels.ReviewDate("14:35", "Tag 24") == "Tag 24 — 14:35");
-    Geometry("user translations never overwritten", File.ReadAllText(labelsPath) == custom);
+    Geometry("extra label keys are silent and user translations never overwritten", File.ReadAllText(labelsPath) == custom && warnings.Count == 0);
     File.WriteAllText(labelsPath, "{\"sort.price.asc\":42,\"sort.count.asc\":\"\",\"reviews.timestamp\":\"bad\",\"reviews.positive\":\"Positiv zuerst\"}");
     Labels.Load(labelsPath, warnings.Add);
     Geometry("invalid entries fall back individually", Labels.Get("sort.price.asc") == "Price: low to high" && Labels.Get("sort.count.asc") == "Count: low to high" && Labels.ReviewDate("12:00", "Day 1") == "12:00 · Day 1" && Labels.Get("reviews.positive") == "Positiv zuerst");

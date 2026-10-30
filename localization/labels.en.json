@@ -82,7 +82,6 @@
   "settings.option.scan": "Distinct apartment and shelter scan colors",
   "settings.option.conditions": "Consistent greenhouse condition order",
   "settings.option.reviewTime": "Review timestamps",
-  "settings.option.fastReviews": "Fast review loading (virtualization)",
   "settings.option.sales": "Sales quantities and staff cost breakdown",
   "settings.option.ingredients": "Combined ingredient view",
   "settings.option.debounce": "Search delay (milliseconds)",

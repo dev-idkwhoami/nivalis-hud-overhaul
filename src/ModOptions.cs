@@ -8,7 +8,7 @@ namespace NivalisMods.HudOverhaul;
 internal static class ModOptions
 {
     internal static Setting<bool> Search = null!, Sorting = null!, QuickActions = null!, Staff = null!,
-        Scan = null!, Conditions = null!, ReviewTime = null!, FastReviews = null!, Sales = null!, Ingredients = null!, Screens = null!;
+        Scan = null!, Conditions = null!, ReviewTime = null!, Sales = null!, Ingredients = null!, Screens = null!;
     internal static Setting<bool> VerboseLogging = null!;
     internal static Setting<bool> QuestHudVisible = null!;
     internal static Setting<bool> DeductVenueStock = null!;
@@ -16,13 +16,15 @@ internal static class ModOptions
     internal static void Initialize(SettingsCategory features, SettingsCategory shopping, SettingsCategory farm, DeveloperSection developer)
     {
         Setting<bool> Feature(string key, string label) => features.Toggle(key, Labels.Get("settings.option." + label), true);
-        Search = Feature("Search", "search"); Sorting = Feature("Sorting", "sorting");
+        Search = Feature("Search", "search");
+        Search.Changed += _ => Plugin.Guard("Refresh vendor products", VendorProducts.RefreshOpenWindows);
+        Sorting = Feature("Sorting", "sorting");
         QuickActions = Feature("QuickActions", "quickActions"); Staff = Feature("StaffOrdering", "staff");
         Scan = Feature("ScanColors", "scan");
         QuestHudVisible = Feature("QuestHudVisible", "questHudVisible");
         QuestHudVisible.Changed += _ => Plugin.Guard("Apply quest HUD visibility", QuestHudVisibility.ApplySetting);
         Conditions = Feature("ConditionOrder", "conditions"); ReviewTime = Feature("ReviewTimestamps", "reviewTime");
-        FastReviews = Feature("FastReviews", "fastReviews"); Sales = Feature("SalesStatistics", "sales");
+        Sales = Feature("SalesStatistics", "sales");
         Ingredients = Feature("CombinedIngredients", "ingredients");
         DebounceMs = features.Stepper("SearchDelayMs", Labels.Get("settings.option.debounce"), 250, 0, 1000, 50);
         DebounceMs.Hint = "Delay before refreshing search results; zero disables the delay.";

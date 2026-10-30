@@ -11,10 +11,10 @@ using Nivalis.GhostSystem.CustomerLoop;
 namespace NivalisMods.HudOverhaul;
 
 [BepInPlugin(Id, "HUD Overhaul", Version)]
-[BepInDependency(SettingsRegistry.PluginId, ">=1.0.3")]
+[BepInDependency(SettingsRegistry.PluginId, ">=1.0.4")]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.7";
+    public const string Version = "1.1.8";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
@@ -40,7 +40,6 @@ public sealed partial class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<FilterExtension>();
         ClassInjector.RegisterTypeInIl2Cpp<ListSorter>();
         ClassInjector.RegisterTypeInIl2Cpp<ReviewMetrics>();
-        ClassInjector.RegisterTypeInIl2Cpp<VirtualReviews>();
         ClassInjector.RegisterTypeInIl2Cpp<ShoppingVenues>();
         var harmony = new Harmony(Id);
         harmony.PatchAll(typeof(Plugin).Assembly);
@@ -140,13 +139,9 @@ internal static class JournalPatch
 [HarmonyPatch(typeof(LocaleReviewOverviewTab), nameof(LocaleReviewOverviewTab.RefreshReviewList))]
 internal static class ReviewsPatch
 {
-    [HarmonyPrefix]
-    private static bool Prefix(LocaleReviewOverviewTab __instance) => !VirtualReviews.Refresh(__instance);
-
     [HarmonyPostfix]
     private static void Postfix(LocaleReviewOverviewTab __instance)
     {
-        if (ListSorter.Get(__instance.reviewList).ExternalOrder) return;
         Plugin.Guard("Review sorting", () =>
         {
             ListSorter.Get(__instance.reviewList).ApplyDataOrder = mode => DataListSorting.Reviews(__instance, mode);

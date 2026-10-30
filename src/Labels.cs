@@ -43,11 +43,9 @@ internal static class Labels
                 throw new JsonException("Expected an object mapping label keys to strings.");
             foreach (var property in doc.RootElement.EnumerateObject())
             {
-                if (!Defaults.ContainsKey(property.Name))
-                {
-                    warn($"Unknown label key '{property.Name}' in {path}; ignored.");
-                    continue;
-                }
+                // Translation files can outlive features or come from another
+                // mod version. Extra keys are harmless; preserve them silently.
+                if (!Defaults.ContainsKey(property.Name)) continue;
                 if (property.Value.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(property.Value.GetString()))
                 {
                     warn($"Invalid label '{property.Name}'; using English default.");

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Nivalis.UI.InGameMenu.CharacterWindow;
 using Nivalis.GhostSystem.Ai;
 using Nivalis.Locale.UI;
 using NivalisMods.HudOverhaul;
@@ -53,6 +54,64 @@ try { throw new InvalidOperationException("Native failure"); }
 catch (InvalidOperationException) { }
 finally { finalizer(ui, saved); }
 Check("native exception cleanup restores text", ui.searchField.text == "Tea");
+var productsPrefix = typeof(VendorProducts).GetMethod("Prefix", flags)!.CreateDelegate<ProductsBegin>();
+var productsRefresh = typeof(VendorProductsRefresh).GetMethod("Postfix", flags)!.CreateDelegate<Action<CharacterWindowUi>>();
+var window = new CharacterWindowUi();
+var details = window.vendorDetails;
+details.Parent = window;
+string? ProductQuery(string query, Person seller, string? native = null)
+{
+    window.vendorFilteringUI.searchField.m_Text = query;
+    productsPrefix(details, seller, ref native);
+    return native;
+}
+Check("ingredient query reaches native product filter", ProductQuery("rice", amy) == "rice");
+Check("trimmed partial product query reaches native filter", ProductQuery("  TE  ", amy) == "TE");
+Check("sold-out catalogue products still select product filter", ProductQuery("Tea", amy) == "Tea");
+var nameAndItem = Seller("Rice Merchant", 1, 1, "Red Rice", "Tea");
+Check("product match takes priority over a vendor-name match", ProductQuery("Rice", nameAndItem) == "Rice");
+Check("vendor-name-only query keeps full catalogue", ProductQuery("Amy", amy, "Amy") == null);
+Check("empty query restores full catalogue", ProductQuery("", amy, "rice") == null);
+Check("whitespace restores full catalogue", ProductQuery("   ", amy, "rice") == null);
+Check("query does not carry over between vendors", ProductQuery("Tea", amy) == "Tea" && ProductQuery("Bob", bob) == null);
+Check("query retains game-provided unmatched filter", ProductQuery("missing", amy, "missing") == "missing");
+ModOptions.Search.Value = false;
+Check("disabled feature leaves native product filter untouched", ProductQuery("Tea", amy, "native") == "native");
+ModOptions.Search.Value = true;
+window.vendorCharactersToggle.isOn = false;
+Check("story/staff view is untouched", ProductQuery("Tea", amy, "native") == "native");
+window.vendorCharactersToggle.isOn = true;
+details.Parent = null;
+Check("unrelated vendor details are untouched", ProductQuery("Tea", amy, "native") == "native");
+details.Parent = window;
+Check("missing catalogue retains native query", ProductQuery("Tea", empty, "native") == "native");
+Check("lookup exception retains native query", ProductQuery("Tea", broken, "native") == "native");
+details._person = amy;
+window.vendorFilteringUI.searchField.m_Text = "Tea";
+window.vendorProductsListScrollRect.velocity = new UnityEngine.Vector2 { y = 10 };
+productsRefresh(window);
+Check("filtered products start at the top without inertia", window.vendorProductsListScrollRect.verticalNormalizedPosition == 1 && window.vendorProductsListScrollRect.velocity.y == 0);
+Check("query refresh updates already-selected vendor", details.Initializations == 1 && details.LastFilter == "Tea");
+window.vendorFilteringUI.searchField.m_Text = "";
+productsRefresh(window);
+Check("clearing query rebuilds same vendor's products", details.Initializations == 2 && details.LastFilter == null);
+details.canvasGroup.alpha = 0;
+productsRefresh(window);
+Check("hidden details are not resurrected", details.Initializations == 2);
+details.canvasGroup.alpha = 1;
+window.isActiveAndEnabled = false;
+productsRefresh(window);
+Check("inactive windows are not refreshed", details.Initializations == 2);
+window.isActiveAndEnabled = true;
+ModOptions.Search.Value = false;
+productsRefresh(window);
+Check("disabled search does not intercept list refresh", details.Initializations == 2);
+UnityEngine.Resources.Objects = new object[] { window };
+VendorProducts.RefreshOpenWindows();
+Check("setting change can restore native product list", details.Initializations == 3);
+ModOptions.Search.Value = true;
 Console.WriteLine($"Passed {checks} vendor search checks (production callbacks with managed fixtures).");
 
 delegate void Begin(VendorFilteringUI ui, PersonList people, out string? state);
+
+delegate void ProductsBegin(VendorDetails details, Person person, ref string? filter);

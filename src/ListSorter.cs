@@ -24,7 +24,6 @@ public sealed class ListSorter : MonoBehaviour
     private ItemListUI _list = null!;
     private int _id;
     private bool _dirty;
-    internal bool ExternalOrder;
     internal bool SortingControl;
     internal Func<SortMode> Mode = null!;
     internal Action<SortMode>? ApplyDataOrder;
@@ -80,7 +79,7 @@ public sealed class ListSorter : MonoBehaviour
 
     public void LateUpdate()
     {
-        if (!_dirty || Mode == null || ExternalOrder) return;
+        if (!_dirty || Mode == null) return;
         _dirty = false;
         var mode = Mode();
         var capture = PerformanceTrace.Begin($"HUD sort {mode.Label} ({_list.DisplayedCount} rows)");

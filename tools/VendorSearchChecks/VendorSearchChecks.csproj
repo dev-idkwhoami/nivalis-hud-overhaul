@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/VendorSearch.cs" Link="VendorSearch.cs" />
+    <Compile Include="../../src/VendorProducts.cs" Link="VendorProducts.cs" />
     <Compile Include="../../src/SearchText.cs" Link="SearchText.cs" />
   </ItemGroup>
 </Project>

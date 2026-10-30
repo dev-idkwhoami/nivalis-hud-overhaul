@@ -8,7 +8,7 @@ installing development builds, and packaging releases.
 - .NET SDK 8 (the mod targets .NET 6; the checks target .NET 8).
 - GNU Make, Bash, and standard Unix utilities (including sed).
 - The game with BepInEx 6 IL2CPP and generated interop assemblies.
-- Mod Companion 1.0.3 or newer; version 1.0.3 is included in the archive.
+- Mod Companion 1.0.4 or newer; version 1.0.4 is included in the archive.
 
 Launch the game with BepInEx once before building. The build reads references
 from `BepInEx/core/` and `BepInEx/interop/` in that installation. The first build
@@ -119,14 +119,27 @@ This uses the existing Farming Screens feature and adds no polling or colliders.
 ## Known Vendors search
 
 With expanded search enabled, the Known Vendors search matches vendor names or
-the names of items they sell, including temporarily sold-out items. Matching is
-case-insensitive and accepts part of a name. Location and vendor-type filters
-still apply; undiscovered vendors are not added. Stock is read only when filtering,
-with no background scan or persistent inventory cache.
+the names of items they sell, including temporarily sold-out items. Location and
+vendor-type filters still apply; undiscovered vendors are not added.
 
-`make test-vendor-search` runs the search callbacks against managed fixtures,
-including combined filters, disabled search, sold-out items and failure cleanup.
-The game UI and IL2CPP hooks still need an in-game check.
+The selected vendor's Products list follows the same search. Matching products
+are shown even if the query also matches the vendor's name. A vendor-name-only
+search shows the full catalogue; clearing the query restores all products.
+Changing the query refreshes an already-selected vendor. Prices, stock and the
+product rows remain native; sold-out catalogue matches do not invent stock rows.
+Disabling Expanded Search restores the game's product-filter behavior.
+
+`make test-vendor-search` exercises filtering, selection refresh and disabled
+behavior with managed fixtures. Native rendering and controller interaction
+still need an in-game check.
+
+## Native review loading
+
+Reviews use the game's optimized list. The retired Fast Reviews toggle and
+custom virtualization have been removed; review sorting and timestamps remain.
+Bundled Mod Companion 1.0.4 removes the obsolete `FastReviews` config entry after
+registration completes, along with any other unbound entries in Companion-owned
+configs. No HUD-specific config migration is required.
 
 ## Quest HUD visibility
 
@@ -208,7 +221,7 @@ Licensed under the [MIT License](LICENSE).
 
 ## Mod Companion settings
 
-Mod Companion 1.0.3 or newer is required; 1.0.3 is included. F5 and the native settings entry open
+Mod Companion 1.0.4 or newer is required; 1.0.4 is included. F5 and the native settings entry open
 its shared menu; HUD Overhaul no longer provides a standalone settings window.
 Choose HUD Overhaul's icon in the top row. Features, Shopping and Farm are custom
 tabs; Controls, Developer and Info use Companion's dedicated section APIs. Controls

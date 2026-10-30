@@ -21,6 +21,5 @@
     <Compile Include="../src/Labels.cs" Link="Labels.cs" />
     <EmbeddedResource Include="../localization/labels.en.json" LogicalName="HudOverhaul.Labels.en.json" WithCulture="false" />
     <Compile Include="../src/SortOrder.cs" Link="SortOrder.cs" />
-    <Compile Include="../src/ReviewWindow.cs" Link="ReviewWindow.cs" />
   </ItemGroup>
 </Project>
