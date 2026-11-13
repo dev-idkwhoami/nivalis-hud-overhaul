@@ -44,17 +44,6 @@ public sealed class ListSorter : MonoBehaviour
     }
 
     [HideFromIl2Cpp]
-    internal static void Attach(ItemListUI list, InventoryItemFilteringUi filter)
-    {
-        if (list == null || filter == null) return;
-        var extension = filter.GetComponent<FilterExtension>();
-        if (extension == null) return;
-        var sorter = Get(list);
-        sorter.Mode = extension.Current;
-        sorter._dirty = true;
-    }
-
-    [HideFromIl2Cpp]
     internal static void MarkDirty(ItemListUI list)
     {
         if (Instances.TryGetValue(list.GetInstanceID(), out var sorter) && sorter != null)

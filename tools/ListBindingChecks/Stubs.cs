@@ -84,7 +84,7 @@ namespace Nivalis.UI
 {
     public sealed class ItemListUI
     {
-        public sealed class __c__DisplayClass101_0<TData,TView> : Il2CppSystem.Object where TView : class
+        public sealed class __c__DisplayClass111_0<TData,TView> : Il2CppSystem.Object where TView : class
         {
             public Il2CppSystem.Action<TView,TData,int,bool> bind = null!;
         }
@@ -110,7 +110,7 @@ namespace Nivalis.UI
             Il2CppSystem.Action<TView,TData,int,bool> bind, int selected) where TView : class
         {
             CurrentCallback = bind;
-            _binder = new Binder { Target = new __c__DisplayClass101_0<TData,TView> { bind = bind } };
+            _binder = new Binder { Target = new __c__DisplayClass111_0<TData,TView> { bind = bind } };
             Data = data.Select(x => (object)x!).ToArray(); SelectedIndex = selected; Rebinds++;
             BindAt = i => bind.Invoke(Activator.CreateInstance<TView>(), (TData)Data[i], i, i == SelectedIndex);
         }

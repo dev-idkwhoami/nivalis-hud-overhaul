@@ -60,13 +60,13 @@ internal static class EstimatedShopping
         internal Scope(ShoppingListManager manager, VenueMap venues, ItemMap items)
         {
             _manager = manager; _venues = manager.VenuesLowOnIngredientsMap; _items = manager.ShoppingList;
-            manager.VenuesLowOnIngredientsMap = venues;
-            manager._ShoppingList_k__BackingField = items;
+            manager._venuesLowOnIngredientsMap = venues;
+            manager._shoppingList = items;
         }
         public void Dispose()
         {
-            _manager.VenuesLowOnIngredientsMap = _venues;
-            _manager._ShoppingList_k__BackingField = _items;
+            _manager._venuesLowOnIngredientsMap = _venues;
+            _manager._shoppingList = _items;
         }
     }
 

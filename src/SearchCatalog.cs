@@ -22,7 +22,10 @@ internal sealed class SearchCatalog
 
     internal bool ItemMatches(ItemType item, string query) => SearchText.Matches(query, ItemFields(item));
 
-    internal bool RecipeMatches(IRecipe recipe, string query)
+    internal bool RecipeMatches(IRecipe recipe, string query) =>
+        SearchText.Terms(query).All(term => RecipeMatchesTerm(recipe, term));
+
+    private bool RecipeMatchesTerm(IRecipe recipe, string query)
     {
         if (ItemMatches(recipe.Output.type, query)) return true;
         var tags = new Il2CppSystem.Collections.Generic.HashSet<ObjectTag>();

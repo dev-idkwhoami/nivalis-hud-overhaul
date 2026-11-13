@@ -17,7 +17,6 @@ internal static class ModOptions
     {
         Setting<bool> Feature(string key, string label) => features.Toggle(key, Labels.Get("settings.option." + label), true);
         Search = Feature("Search", "search");
-        Search.Changed += _ => Plugin.Guard("Refresh vendor products", VendorProducts.RefreshOpenWindows);
         Sorting = Feature("Sorting", "sorting");
         QuickActions = Feature("QuickActions", "quickActions"); Staff = Feature("StaffOrdering", "staff");
         Scan = Feature("ScanColors", "scan");
@@ -38,7 +37,7 @@ internal static class ModOptions
             "Detailed diagnostics in BepInEx/LogOutput.log. Saved gameplay history is independent of logging verbosity.");
         DeductVenueStock.Changed += _ => Plugin.Guard("Refresh shopping stock mode", EstimatedShopping.RefreshPanels);
         Scan.Changed += _ => { if (!Scan.Value) ScanMarkerColors.RestoreAll(); };
-        Sorting.Changed += _ => Plugin.Guard("Refresh sorting setting", FilterExtension.RefreshSettings);
+        Sorting.Changed += _ => Plugin.Guard("Refresh sorting setting", ListSorter.RefreshSettings);
         Screens.Changed += _ => Plugin.Guard("Refresh farm screens setting", () =>
         {
             FarmProduceWheel.Close(); FarmScreenEditor.ExitMode();

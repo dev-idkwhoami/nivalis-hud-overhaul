@@ -116,22 +116,21 @@ The screen's latest produce image is kept in the native restoration cache, so
 automatic label updates cannot replace the placement appearance mid-move.
 This uses the existing Farming Screens feature and adds no polling or colliders.
 
-## Known Vendors search
+## Update #9 compatibility
 
-With expanded search enabled, the Known Vendors search matches vendor names or
-the names of items they sell, including temporarily sold-out items. Location and
-vendor-type filters still apply; undiscovered vendors are not added.
+Updated against regenerated bindings for build 26631852. Shop price/comfort,
+transfer/composter/vending amount, and recipe/menu calories/exclusivity/price
+sorting now use the native controls. The duplicate sorting adapters and dropdown
+rewrites have been retired; HUD Overhaul still adds journal and review sorting.
 
-The selected vendor's Products list follows the same search. Matching products
-are shown even if the query also matches the vendor's name. A vendor-name-only
-search shows the full catalogue; clearing the query restores all products.
-Changing the query refreshes an already-selected vendor. Prices, stock and the
-product rows remain native; sold-out catalogue matches do not invent stock rows.
-Disabling Expanded Search restores the game's product-filter behavior.
+Known Vendors search and product filtering now use the game's multi-word search,
+including product, vendor type and district matches. The custom vendor search
+hooks have been removed. Expanded item/recipe search still adds tags, actual
+recipe ingredients and equipment, with all query words required.
 
-`make test-vendor-search` exercises filtering, selection refresh and disabled
-behavior with managed fixtures. Native rendering and controller interaction
-still need an in-game check.
+Greenhouse opening, placement callbacks, virtual list binding, shopping-list
+storage and the item-search native call signature match the new bindings.
+Managed checks do not replace in-game validation.
 
 ## Native review loading
 

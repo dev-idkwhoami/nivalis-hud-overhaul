@@ -17,7 +17,7 @@ internal static class ExpandedSearch
     // Preserve IL2CPP's trailing MethodInfo / generic context verbatim. Harmony
     // generic trampolines cannot safely substitute a single closed type here.
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    private delegate void ListFilter(IntPtr self, IntPtr items, IntPtr venue, IntPtr method);
+    private delegate void ListFilter(IntPtr self, IntPtr items, IntPtr venue, IntPtr price, IntPtr method);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate byte RecipePredicate(IntPtr item, IntPtr search, IntPtr venue, IntPtr method);
     private static readonly List<INativeDetour> Hooks = new();
@@ -40,7 +40,7 @@ internal static class ExpandedSearch
                 var pointer = MethodPointer(listInfo);
                 if (!installed.Add(pointer)) continue;
                 ListFilter original = null!;
-                ListFilter replacement = (self, items, venue, method) => FilterItems(original, self, items, venue, method);
+                ListFilter replacement = (self, items, venue, price, method) => FilterItems(original, self, items, venue, price, method);
                 var hook = INativeDetour.Create(pointer, replacement);
                 Hooks.Add(hook);
                 original = hook.GenerateTrampoline<ListFilter>();
@@ -81,9 +81,9 @@ internal static class ExpandedSearch
         return pointer;
     }
 
-    private static void FilterItems(ListFilter original, IntPtr self, IntPtr items, IntPtr venue, IntPtr method)
+    private static void FilterItems(ListFilter original, IntPtr self, IntPtr items, IntPtr venue, IntPtr price, IntPtr method)
     {
-        if (!ModOptions.Search.Value) { original(self, items, venue, method); return; }
+        if (!ModOptions.Search.Value) { original(self, items, venue, price, method); return; }
         InventoryItemFilteringUi? filter = null;
         string? query = null;
         var cleared = false;
@@ -136,7 +136,7 @@ internal static class ExpandedSearch
         catch (Exception e) { Report(e); }
         try
         {
-            original(self, items, venue, method);
+            original(self, items, venue, price, method);
             if (expectedCount >= 0)
             {
                 var remaining = new Il2CppSystem.Object(items).Cast<Il2CppSystem.Collections.ICollection>().Count;

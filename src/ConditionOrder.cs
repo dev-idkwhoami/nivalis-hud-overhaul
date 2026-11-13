@@ -11,7 +11,7 @@ internal static class ConditionOrder
 {
     private static bool _reportedUnexpectedLayout;
 
-    [HarmonyPostfix, HarmonyPatch(nameof(GreenhouseConsoleUI.Open))]
+    [HarmonyPostfix, HarmonyPatch(nameof(GreenhouseConsoleUI.Open), typeof(Nivalis.GreenhouseAreaGhost), typeof(bool))]
     private static void AfterOpen(GreenhouseConsoleUI __instance) => ApplyOrder(__instance);
 
     // The game rebuilds explicit navigation when the input device changes.

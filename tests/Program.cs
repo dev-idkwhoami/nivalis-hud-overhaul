@@ -111,7 +111,9 @@ Geometry("equipment names match", SearchText.Matches("grill", ["Teppanyaki Grill
 Geometry("ordinary names still match", SearchText.Matches("raw milk", ["Raw Milk", "Seed"]));
 Geometry("empty search keeps entries", SearchText.Matches("  ", []));
 Geometry("unknown search rejects", !SearchText.Matches("unrelated", ["Waffles", "Sweet"]));
-Geometry("query does not span fields", !SearchText.Matches("sweet fruit", ["Sweet", "Fruit"]));
+Geometry("multi-word query matches across fields", SearchText.Matches("sweet fruit", ["Sweet", "Fruit"]));
+Geometry("all query terms required", !SearchText.Matches("sweet fish", ["Sweet", "Fruit"]));
+Geometry("word order and whitespace", SearchText.Matches(" milk  raw\t", ["Raw Milk"]));
 Geometry("null metadata is harmless", !SearchText.Matches("fruit", [null, ""]));
 Console.WriteLine($"Passed {checks} total checks including expanded search matching.");
 

@@ -13,7 +13,7 @@ export DOTNET_SKIP_FIRST_TIME_EXPERIENCE := 1
 export DOTNET_CLI_HOME := $(CURDIR)/.tools/cli-home
 export NUGET_PACKAGES := $(CURDIR)/.tools/nuget
 
-.PHONY: help check-sdk check-game build test test-quest-hud test-shopping test-vendor-search install package deploy clean check-release
+.PHONY: help check-sdk check-game build test test-quest-hud test-shopping install package deploy clean check-release
 help:
 	@printf '%s\n' 'make deploy GAME_PATH="..."               Build, verify, and publish a tagged release'
 	@printf '%s\n' 'make build GAME_PATH="../Nivalis Nights"  Build the DLL' 'make test                                Run HUD Overhaul checks' 'make install GAME_PATH="..."              Build and copy the DLL' 'make package GAME_PATH="..."              Build a release ZIP' 'make clean                               Remove generated build output' 'Optional: DOTNET=dotnet CONFIGURATION=Release'
@@ -26,11 +26,8 @@ build: check-sdk check-game
 	@"$$DOTNET" build "$$PROJECT" --configuration "$$CONFIGURATION" "-p:GamePath=$$(cd "$$GAME_PATH" && pwd)" --nologo
 
 # These checks use pure managed sources and do not need game assemblies.
-test: check-sdk test-quest-hud test-shopping test-vendor-search test-list-binding
+test: check-sdk test-quest-hud test-shopping test-list-binding
 	@"$$DOTNET" run --project tests/SortingChecks.csproj --configuration "$$CONFIGURATION"
-
-test-vendor-search: check-sdk
-	@"$$DOTNET" run --project tools/VendorSearchChecks/VendorSearchChecks.csproj --configuration "$$CONFIGURATION"
 
 test-shopping: check-sdk
 	@"$$DOTNET" run --project tools/ShoppingChecks/ShoppingChecks.csproj --configuration "$$CONFIGURATION"

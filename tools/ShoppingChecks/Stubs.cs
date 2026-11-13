@@ -91,9 +91,10 @@ namespace Nivalis
             public int MissingItems => Math.Max(0, demand - amount);
         }
         public sealed class VenueLowIngredientsData { public Dictionary<ItemType, ShoppingListData> LowIngredients = new(); }
-        public Dictionary<Venue, VenueLowIngredientsData> VenuesLowOnIngredientsMap = new();
-        public Dictionary<ItemType, ShoppingListData> _ShoppingList_k__BackingField = new();
-        public Dictionary<ItemType, ShoppingListData> ShoppingList => _ShoppingList_k__BackingField;
+        public Dictionary<Venue, VenueLowIngredientsData> _venuesLowOnIngredientsMap = new();
+        public Dictionary<Venue, VenueLowIngredientsData> VenuesLowOnIngredientsMap => _venuesLowOnIngredientsMap;
+        public Dictionary<ItemType, ShoppingListData> _shoppingList = new();
+        public Dictionary<ItemType, ShoppingListData> ShoppingList => _shoppingList;
     }
 }
 namespace Nivalis.Player

@@ -14,7 +14,7 @@ namespace NivalisMods.HudOverhaul;
 [BepInDependency(SettingsRegistry.PluginId, ">=1.0.4")]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.8";
+    public const string Version = "1.1.9";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
@@ -37,7 +37,6 @@ public sealed partial class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<StaffOrdering>();
         ClassInjector.RegisterTypeInIl2Cpp<StaffOrderButtons>();
         ClassInjector.RegisterTypeInIl2Cpp<SearchDebounce>();
-        ClassInjector.RegisterTypeInIl2Cpp<FilterExtension>();
         ClassInjector.RegisterTypeInIl2Cpp<ListSorter>();
         ClassInjector.RegisterTypeInIl2Cpp<ReviewMetrics>();
         ClassInjector.RegisterTypeInIl2Cpp<ShoppingVenues>();
@@ -74,49 +73,6 @@ internal static class FilterOptionsPatch
     private static void Prefix(InventoryItemFilteringUi __instance) => Plugin.Guard("Prepare sort options", () =>
         FilterExtension.Prepare(__instance));
 
-    [HarmonyPostfix]
-    private static void Postfix(InventoryItemFilteringUi __instance) => Plugin.Guard("Label sort options", () =>
-        __instance.GetComponent<FilterExtension>()?.Relabel());
-}
-
-[HarmonyPatch(typeof(MenuModificationWindow))]
-internal static class MenuPatch
-{
-    [HarmonyPostfix, HarmonyPatch(nameof(MenuModificationWindow.RefreshMenuList))]
-    private static void Menu(MenuModificationWindow __instance) => Plugin.Guard("Sort venue menu", () =>
-    {
-        ListSorter.Get(__instance.menuItemList).ApplyDataOrder = mode => DataListSorting.Menu(__instance, mode);
-        ListSorter.Attach(__instance.menuItemList, __instance.menuListFilter);
-    });
-
-    [HarmonyPostfix, HarmonyPatch(nameof(MenuModificationWindow.RefreshRecipeList))]
-    private static void Recipes(MenuModificationWindow __instance) => Plugin.Guard("Sort known recipes", () =>
-    {
-        ListSorter.Get(__instance.recipeItemList).ApplyDataOrder = mode => DataListSorting.Recipes(__instance, mode);
-        ListSorter.Attach(__instance.recipeItemList, __instance.recipeListFilter);
-    });
-
-    [HarmonyPostfix, HarmonyPatch(nameof(MenuModificationWindow.MenuItemPriceChangeListener))]
-    private static void PriceChanged(MenuModificationWindow __instance) => Plugin.Guard("Refresh price order", () =>
-    {
-        var filter = __instance.menuListFilter;
-        if (filter?.sortingDropdown == null || filter.sortingValues == null) return;
-        var index = filter.sortingDropdown.value;
-        if (index >= 0 && index < filter.sortingValues.Length &&
-            NativeSortingPairs.Read(filter.sortingValues, index).Ordering == ListSortingOption.Price)
-            __instance.RefreshMenuList();
-    });
-}
-
-[HarmonyPatch(typeof(ShopUiVendorPanel), nameof(ShopUiVendorPanel.Refresh))]
-internal static class VendorPatch
-{
-    [HarmonyPostfix]
-    private static void Postfix(ShopUiVendorPanel __instance) => Plugin.Guard("Sort vendor stock", () =>
-    {
-        ListSorter.Get(__instance.itemsList).ApplyDataOrder = mode => DataListSorting.Vendor(__instance, mode);
-        ListSorter.Attach(__instance.itemsList, __instance.itemFiltering);
-    });
 }
 
 [HarmonyPatch(typeof(JournalUI), nameof(JournalUI.Refresh))]

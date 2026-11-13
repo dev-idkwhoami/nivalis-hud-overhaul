@@ -31,23 +31,6 @@ var vendor = new ShopUiVendorPanel();
 for(var i=0;i<200;i++) vendor._entries.Add(new() { Item=new() { Type=new() { Comfort=i%10 } }, Identity=i.ToString() });
 var product=vendor._entries[73]; vendor.itemsList.SelectedIndex=73;
 vendor.itemsList.Seed<ShopUiVendorPanel.ShopEntry,ShopItemDisplayUI>(vendor._entries,vendor,nameof(ShopUiVendorPanel.BindEntry));
-DataListSorting.Vendor(vendor,new("comfort",SortKey.Comfort,true));
-Check(vendor._entries[0].Item.Type.Comfort==9 && vendor._entries[199].Item.Type.Comfort==0,"vendor full data order");
-Check(vendor._entries.Where(e=>e.Item.Type.Comfort==9).Select(e=>e.Identity).SequenceEqual(Enumerable.Range(0,20).Select(i=>(9+10*i).ToString())),"vendor stable ties");
-Bound(vendor.itemsList,vendor,product,"vendor");
-var menu=new MenuModificationWindow();
-for(var i=0;i<120;i++) { menu._listedRecipes.Add(new() { Calories=i,Exclusivity=120-i }); menu._listedMenuItems.Add(new(new MealMenuItem { Customized=new() { Calories=120-i, Exclusivity=i } },MenuItemDisplayUI.WarningType.Equipment)); }
-var recipe=menu._listedRecipes[29]; menu.recipeItemList.SelectedIndex=29;
-menu.recipeItemList.Seed<IRecipe,RecipeItemDisplayUI>(menu._listedRecipes,menu,nameof(MenuModificationWindow.BindRecipe));
-DataListSorting.Recipes(menu,new("calories",SortKey.Calories,true));
-Check(menu._listedRecipes[0].Calories==119,"recipe calories"); Bound(menu.recipeItemList,menu,recipe,"recipes");
-DataListSorting.Recipes(menu,new("exclusive",SortKey.Exclusivity,true));
-Check(menu._listedRecipes[0].Exclusivity==120,"recipe exclusivity"); Bound(menu.recipeItemList,menu,recipe,"recipes reversed");
-var meal=menu._listedMenuItems[18]; menu.menuItemList.SelectedIndex=18;
-menu.menuItemList.Seed<Il2CppSystem.ValueTuple<MealMenuItem,MenuItemDisplayUI.WarningType>,MenuItemDisplayUI>(menu._listedMenuItems,menu,nameof(MenuModificationWindow.BindMenuItem));
-DataListSorting.Menu(menu,new("calories",SortKey.Calories));
-Check(menu._listedMenuItems[0].Item1.Customized.Calories==1 && menu._listedMenuItems.All(e=>e.Item1.RequestedVenue==menu._venue && e.Item2==MenuItemDisplayUI.WarningType.Equipment),"customized menu data and warning preserved");
-Bound(menu.menuItemList,menu,meal,"menu");
 var reviews=new LocaleReviewOverviewTab();
 for(var i=0;i<300;i++) reviews._listedReviews.Add(new() { ReviewTime=new() {TotalGameSeconds=i},Score=i%5,Positive=i%2==0 });
 reviews.reviewList.Seed<Review,ReviewItemDisplayUi>(reviews._listedReviews,null,nameof(LocaleReviewOverviewTab.BindReview),typeof(LocaleReviewOverviewTab));
@@ -59,9 +42,9 @@ foreach(var key in new[] {SortKey.ReviewTime,SortKey.Stars,SortKey.Sentiment})
     Check(ReferenceEquals(LocaleReviewOverviewTab.LastReview,reviews._listedReviews[299]),"native review static callback "+key);
     Check(key switch {SortKey.ReviewTime=>reviews._listedReviews[0].ReviewTime.TotalGameSeconds==299, SortKey.Stars=>reviews._listedReviews[0].Score==4,_=>reviews._listedReviews.Take(150).All(x=>x.Positive)},"native review order "+key);
 }
-var nativeRebinds=vendor.itemsList.Rebinds;
-DataListSorting.Vendor(vendor,new("native",SortKey.Native));
-Check(vendor.itemsList.Rebinds==nativeRebinds,"native sorting untouched");
+var nativeRebinds=journal.entriesListUi.Rebinds;
+DataListSorting.Journal(journal,new("native",SortKey.Native));
+Check(journal.entriesListUi.Rebinds==nativeRebinds,"native sorting untouched");
 // Shopping-style filters must remove data, remap selection, and support empty results.
 var data=vendor._entries.ToArray();
 var keep=Enumerable.Range(0,data.Length).Where(i=>i%2==0).ToArray();
