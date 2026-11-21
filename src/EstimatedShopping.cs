@@ -16,6 +16,7 @@ internal static class EstimatedShopping
 {
     internal static Setting<bool> _enabled = null!;
     private static bool _fallingBack;
+    private static bool _scoped;
     internal static bool Enabled => _enabled.Value;
     internal static VenueMap? Demands;
     internal static ItemMap? Items;
@@ -23,7 +24,7 @@ internal static class EstimatedShopping
     {
         _enabled = shopping.Choice("DemandMode", "Shopping demand", false,
             new[] { new Choice<bool>(false, "Standard"), new Choice<bool>(true, "Estimated") },
-            "Standard follows venue restocking strategies. Estimated uses seven completed days of sales and Stock Days; recipes without sales history use the venue strategy. This changes your shopping list, not manager restocking.");
+            "Standard follows venue restocking strategies. Estimated uses seven completed days of sales and Stock Days; recipes without sales history use the venue strategy. Venues appear only when this calculation finds a shortage. This changes your shopping list, not manager restocking.");
         _enabled.Changed += _ => { if (!_fallingBack) Plugin.Guard("Refresh shopping demand mode", RefreshPanels); };
     }
 
@@ -36,18 +37,14 @@ internal static class EstimatedShopping
         Plugin.Logger.LogWarning("Estimated shopping unavailable; showing the Standard list.");
     }
 
-    internal static void Select(bool estimated)
-    {
-        if (_enabled.Value == estimated) return;
-        _enabled.Value = estimated;
-    }
-
     internal static void RefreshPanels()
     {
         foreach (var panel in UnityEngine.Resources.FindObjectsOfTypeAll<ShoppingListPanel>())
         {
             if (!panel.gameObject.activeInHierarchy) continue;
-            panel.RefreshItemsList();
+            var window = panel.GetComponentInParent<ShoppingListWindow>();
+            if (window != null) window.RefreshVenueFilter();
+            else panel.RefreshItemsList();
             panel.ScrollToTop();
         }
     }
@@ -57,14 +54,21 @@ internal static class EstimatedShopping
         private readonly ShoppingListManager _manager;
         private readonly VenueMap _venues;
         private readonly ItemMap _items;
+        private readonly bool _previousScope;
+        private bool _disposed;
         internal Scope(ShoppingListManager manager, VenueMap venues, ItemMap items)
         {
             _manager = manager; _venues = manager.VenuesLowOnIngredientsMap; _items = manager.ShoppingList;
+            _previousScope = _scoped;
+            _scoped = true;
             manager._venuesLowOnIngredientsMap = venues;
             manager._shoppingList = items;
         }
         public void Dispose()
         {
+            if (_disposed) return;
+            _disposed = true;
+            _scoped = _previousScope;
             _manager._venuesLowOnIngredientsMap = _venues;
             _manager._shoppingList = _items;
         }
@@ -72,6 +76,9 @@ internal static class EstimatedShopping
 
     internal static Scope? Begin()
     {
+        // RefreshVenueFilter calls RefreshItemsList, which binds rows. Nested
+        // consumers share the outer calculation and restore it on return.
+        if (_scoped) return BeginCached();
         Demands = null; Items = null;
         if (!Enabled && ModOptions.DeductVenueStock.Value) return null;
         var manager = ShoppingListManager.Instance;
@@ -81,7 +88,6 @@ internal static class EstimatedShopping
         player.GetOwnedVenues(owned);
         var venues = new VenueMap();
         var totals = new Dictionary<ItemType, int>();
-        var replaced = new Dictionary<ItemType, int>();
         var today = TimeOfDayManager.CurrentTime.GameplayGameDay;
         for (var v = 0; v < owned.Count; v++)
         {
@@ -132,7 +138,6 @@ internal static class EstimatedShopping
             if (native != null)
                 foreach (var pair in native.LowIngredients)
                 {
-                    replaced[pair.Key] = replaced.GetValueOrDefault(pair.Key) + pair.Value.MissingItems;
                     if (!ingredients.ContainsKey(pair.Key)) data.LowIngredients[pair.Key] = pair.Value;
                 }
             foreach (var pair in ingredients)
@@ -149,13 +154,10 @@ internal static class EstimatedShopping
             foreach (var pair in data.LowIngredients)
                 totals[pair.Key] = totals.GetValueOrDefault(pair.Key) + pair.Value.MissingItems;
         }
-        // Native shopping combines venue shortages with other needs. Preserve
-        // the remainder (quests etc.) and count carried inventory just once.
-        foreach (var pair in manager.ShoppingList)
-        {
-            var remainder = Math.Max(0, pair.Value.MissingItems - replaced.GetValueOrDefault(pair.Key));
-            if (remainder > 0) totals[pair.Key] = totals.GetValueOrDefault(pair.Key) + remainder;
-        }
+        // Update #10 exposes quest demand separately. Deriving a remainder
+        // from ShoppingList loses quests when carried stock hid the native row.
+        foreach (var pair in manager._questItemsDemand)
+            totals[pair.Key] = totals.GetValueOrDefault(pair.Key) + pair.Value;
         var items = new ItemMap();
         foreach (var pair in totals)
         {
@@ -165,6 +167,12 @@ internal static class EstimatedShopping
         Demands = venues; Items = items;
         return new Scope(manager, venues, items);
     }
+    internal static Scope? BeginCached()
+    {
+        if ((!Enabled && ModOptions.DeductVenueStock.Value) || Demands == null || Items == null) return null;
+        return new Scope(ShoppingListManager.Instance, Demands, Items);
+    }
+
 }
 
 [HarmonyPatch(typeof(ShoppingListPanel), nameof(ShoppingListPanel.RefreshItemsList))]
@@ -178,6 +186,34 @@ internal static class EstimatedShoppingPatch
         if (EstimatedShopping.Enabled && state == null) EstimatedShopping.FallBack();
         __state = state;
     }
+    [HarmonyFinalizer]
+    private static void Finalizer(EstimatedShopping.Scope? __state) => __state?.Dispose();
+}
+
+// The standalone window calculates its native venue counts before refreshing
+// the panel. Keep both consumers inside the same temporary demand scope.
+[HarmonyPatch(typeof(ShoppingListWindow), nameof(ShoppingListWindow.RefreshVenueFilter))]
+internal static class EstimatedShoppingWindowPatch
+{
+    [HarmonyPrefix]
+    private static void Prefix(out EstimatedShopping.Scope? __state)
+    {
+        EstimatedShopping.Scope? state = null;
+        Plugin.Guard("Estimate venue demand", () => state = EstimatedShopping.Begin());
+        if (EstimatedShopping.Enabled && state == null) EstimatedShopping.FallBack();
+        __state = state;
+    }
+    [HarmonyFinalizer]
+    private static void Finalizer(EstimatedShopping.Scope? __state) => __state?.Dispose();
+}
+
+// Recycled and expanded rows read venue details after the refresh scope ends.
+// Reuse the last calculation without scanning receipt history for every row.
+[HarmonyPatch(typeof(ShoppingListItemDisplayUI), nameof(ShoppingListItemDisplayUI.InitializeVenuesInfo))]
+internal static class EstimatedShoppingRowPatch
+{
+    [HarmonyPrefix]
+    private static void Prefix(out EstimatedShopping.Scope? __state) => __state = EstimatedShopping.BeginCached();
     [HarmonyFinalizer]
     private static void Finalizer(EstimatedShopping.Scope? __state) => __state?.Dispose();
 }

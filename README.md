@@ -116,6 +116,26 @@ The screen's latest produce image is kept in the native restoration cache, so
 automatic label updates cannot replace the placement appearance mid-move.
 This uses the existing Farming Screens feature and adds no polling or colliders.
 
+## Update #10 compatibility
+
+Checked against regenerated bindings for build 26799517. The game now owns
+shopping venue selection, saved multi-selection, per-venue counts, shop foldouts,
+completion marks and row details. HUD Overhaul's duplicate venue dropdown,
+filtering and row-label overrides have been removed.
+
+Choose Standard or Estimated in **Mod Companion → HUD Overhaul → Shopping →
+Shopping demand**. Standard is the default for new configs; existing choices are
+preserved. The shopping window has no added tabs, controls or layout changes.
+Stock Days and the venue-stock option remain. Estimated
+shopping supplies the native window, venue counts and recycled rows with the same
+temporary demand data, then restores the game's dictionaries. Quest demand uses
+the game's separate quest data, including requirements hidden by carried stock.
+Normal Standard mode leaves native calculations untouched.
+
+The farm-screen placement hook targets the updated placement coroutine. Managed
+checks and binding audits pass; native layout, controller navigation, shopping
+purchases and placement still require an in-game check.
+
 ## Update #9 compatibility
 
 Updated against regenerated bindings for build 26631852. Shop price/comfort,
@@ -225,8 +245,7 @@ its shared menu; HUD Overhaul no longer provides a standalone settings window.
 Choose HUD Overhaul's icon in the top row. Features, Shopping and Farm are custom
 tabs; Controls, Developer and Info use Companion's dedicated section APIs. Controls
 contains Quick Actions and Farm Editor, Developer supplies the standard verbose
-toggle, and Info uses headings and paragraphs for help. Standard/Estimated shopping mode is also exposed and
-stays synchronized with the shopping window's tab selection.
+toggle, and Info uses headings and paragraphs for help. Standard/Estimated shopping mode is selected only in the Shopping settings.
 
 Quick Actions and Farm Editor are configured in the companion's Controls tab.
 Their action registration and binding storage still use the game's input system;

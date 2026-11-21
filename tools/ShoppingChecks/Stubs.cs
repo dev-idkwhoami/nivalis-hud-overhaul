@@ -93,6 +93,7 @@ namespace Nivalis
         public sealed class VenueLowIngredientsData { public Dictionary<ItemType, ShoppingListData> LowIngredients = new(); }
         public Dictionary<Venue, VenueLowIngredientsData> _venuesLowOnIngredientsMap = new();
         public Dictionary<Venue, VenueLowIngredientsData> VenuesLowOnIngredientsMap => _venuesLowOnIngredientsMap;
+        public Dictionary<ItemType, int> _questItemsDemand = new();
         public Dictionary<ItemType, ShoppingListData> _shoppingList = new();
         public Dictionary<ItemType, ShoppingListData> ShoppingList => _shoppingList;
     }
@@ -119,6 +120,7 @@ namespace Nivalis.UI
     {
         public ShoppingListPanel gameObject => this;
         public bool activeInHierarchy => false;
+        public T? GetComponentInParent<T>() where T : class => null;
         public void RefreshItemsList() { }
         public void ScrollToTop() { }
     }
@@ -142,3 +144,6 @@ namespace NivalisMods.HudOverhaul
     }
     internal sealed class Log { internal void LogWarning(string message) { } }
 }
+
+public sealed class ShoppingListWindow { public void RefreshVenueFilter() { } }
+namespace Nivalis.UI { public sealed class ShoppingListItemDisplayUI { public void InitializeVenuesInfo() { } } }

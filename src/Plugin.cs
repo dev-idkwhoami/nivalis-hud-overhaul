@@ -14,7 +14,7 @@ namespace NivalisMods.HudOverhaul;
 [BepInDependency(SettingsRegistry.PluginId, ">=1.0.4")]
 public sealed partial class Plugin : BasePlugin
 {
-    public const string Version = "1.1.9";
+    public const string Version = "1.1.10";
     public const string Id = "local.nivalis.hudoverhaul";
     internal static ManualLogSource Logger = null!;
 
@@ -39,7 +39,7 @@ public sealed partial class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<SearchDebounce>();
         ClassInjector.RegisterTypeInIl2Cpp<ListSorter>();
         ClassInjector.RegisterTypeInIl2Cpp<ReviewMetrics>();
-        ClassInjector.RegisterTypeInIl2Cpp<ShoppingVenues>();
+        ClassInjector.RegisterTypeInIl2Cpp<ShoppingView>();
         var harmony = new Harmony(Id);
         harmony.PatchAll(typeof(Plugin).Assembly);
         ExpandedSearch.Install();

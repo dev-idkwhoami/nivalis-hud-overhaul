@@ -97,6 +97,8 @@ originalVenues[venue].LowIngredients[equipment] = new Data(0, 1);
 originalVenues[second] = new();
 originalVenues[second].LowIngredients[item] = new Data(0, 10);
 originalItems[item] = new Data(0, 15); // 12 venue + 3 quest
+manager._questItemsDemand[item] = 3;
+manager._questItemsDemand[questOnly] = 4;
 originalItems[equipment] = new Data(0, 1);
 originalItems[questOnly] = new Data(0, 4);
 PlayerManager.Instance.LocalPlayer.Inventory.Items.Stock[item] = 10;
@@ -109,9 +111,39 @@ using (EstimatedShopping.Begin())
         manager.VenuesLowOnIngredientsMap[second].LowIngredients[item].demand == 10,
         "fallback uses each venue's own strategy");
 }
+// Native shopping can omit a carried quest item entirely. It must return
+// when an estimate raises total demand above the player's carried quantity.
+originalItems.Remove(item);
+using (EstimatedShopping.Begin())
+{
+    Check(manager.ShoppingList[item].demand == 15, "hidden native quest requirement survives increased estimate");
+    var outerItems = manager.ShoppingList;
+    var outerVenues = manager.VenuesLowOnIngredientsMap;
+    var reads = runtime.Receipts.Reads;
+    using (EstimatedShopping.Begin())
+        Check(ReferenceEquals(manager.ShoppingList, outerItems), "nested window/panel refresh reuses estimate");
+    Check(ReferenceEquals(manager.ShoppingList, outerItems) && runtime.Receipts.Reads == reads,
+        "nested scope restores outer data without reading receipts again");
+    try
+    {
+        using (EstimatedShopping.BeginCached()) throw new InvalidOperationException("row binding failure");
+    }
+    catch (InvalidOperationException) { }
+    Check(ReferenceEquals(manager.VenuesLowOnIngredientsMap, outerVenues), "failed row binding restores outer scope");
+}
+Check(ReferenceEquals(manager.ShoppingList, originalItems) && ReferenceEquals(manager.VenuesLowOnIngredientsMap, originalVenues),
+    "outer refresh restores native dictionaries after nested consumers");
+var cachedReads = runtime.Receipts.Reads;
+using (EstimatedShopping.BeginCached())
+    Check(manager.VenuesLowOnIngredientsMap[venue].LowIngredients[item].demand == 2,
+        "recycled row receives estimated venue details after refresh ended");
+Check(runtime.Receipts.Reads == cachedReads && ReferenceEquals(manager.ShoppingList, originalItems),
+    "recycled rows avoid receipt scans and leave native data intact");
+
 EstimatedShopping._enabled.Value = false;
 Check(EstimatedShopping.Begin() == null && EstimatedShopping.Items == null && EstimatedShopping.Demands == null,
     "switching back to standard clears custom view and restores native demand");
+Check(EstimatedShopping.BeginCached() == null, "standard rows never reuse stale estimate data");
 
 Console.WriteLine($"Passed {checks} shopping compatibility checks (production estimator with value-type fixtures).");
 void Check(bool condition, string message)

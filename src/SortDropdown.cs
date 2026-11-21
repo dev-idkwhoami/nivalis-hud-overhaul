@@ -11,11 +11,10 @@ namespace NivalisMods.HudOverhaul;
 
 internal static class SortDropdown
 {
-    internal static void Attach(ItemListUI list, ScrollRect scroll, SortMode[] modes, Action refresh, bool sortingControl = true)
+    internal static void Attach(ItemListUI list, ScrollRect scroll, SortMode[] modes, Action refresh)
     {
         if (list == null || scroll == null || scroll.viewport == null) return;
         var sorter = ListSorter.Get(list);
-        sorter.SortingControl = sortingControl;
         if (sorter.Dropdown == null)
         {
             var source = FilterExtension.Template;
@@ -96,7 +95,7 @@ internal static class SortDropdown
             navigation.mode = Navigation.Mode.Automatic;
             dropdown.navigation = navigation;
             sorter.Dropdown = dropdown;
-            sorter.Mode = () => sortingControl && !ModOptions.Sorting.Value ? new SortMode(Labels.Get("sort.original"), SortKey.Native) : modes[Math.Clamp(dropdown.value, 0, modes.Length - 1)];
+            sorter.Mode = () => !ModOptions.Sorting.Value ? new SortMode(Labels.Get("sort.original"), SortKey.Native) : modes[Math.Clamp(dropdown.value, 0, modes.Length - 1)];
             dropdown.onValueChanged.AddListener(DelegateSupport.ConvertDelegate<UnityAction<int>>(
                 new Action<int>(_ => Plugin.Guard("Change sorting", refresh))));
             clone.SetActive(true);

@@ -24,7 +24,6 @@ public sealed class ListSorter : MonoBehaviour
     private ItemListUI _list = null!;
     private int _id;
     private bool _dirty;
-    internal bool SortingControl;
     internal Func<SortMode> Mode = null!;
     internal Action<SortMode>? ApplyDataOrder;
     internal TMP_Dropdown? Dropdown;
@@ -58,7 +57,7 @@ public sealed class ListSorter : MonoBehaviour
     [HideFromIl2Cpp]
     internal void SyncSettings()
     {
-        if (!SortingControl || Dropdown == null) return;
+        if (Dropdown == null) return;
         Dropdown.gameObject.SetActive(ModOptions.Sorting.Value);
         var scroll = _list.GetComponentInParent<ScrollRect>() ?? _list.GetComponentInChildren<ScrollRect>(true);
         if (scroll != null && scroll.transform.parent == Dropdown.transform.parent)
